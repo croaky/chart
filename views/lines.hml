@@ -1,0 +1,44 @@
+-# A line chart over time: a chart.Lines.
+-#
+-# The SVG draws the lines and stretches to the plot. Text stays in
+-# HTML beside it, because a stretched glyph would distort. Each date
+-# has a band that hosts its tip, since a two-pixel line is a poor
+-# target. The band is focusable, so its tip also opens on focus.
+- if data.has_chart
+  .chart-lines{ "data-chart-from": data.from, "data-chart-to": data.to }
+    .chart-plot
+      .chart-axis-y
+        - for tick in data.y_ticks
+          %span.chart-axis-y-tick{ style: tick.style }
+            = tick.label
+      .chart-plot-area
+        - for tick in data.y_ticks
+          .chart-rule.chart-rule--across{ style: tick.style }
+        %svg.chart-plot-svg{ viewBox: data.view_box, preserveAspectRatio: "none", "aria-hidden": "true" }
+          - if data.has_zero
+            %line.chart-plot-zero{ x1: "0%", x2: "100%", y1: data.zero_y, y2: data.zero_y }
+          - for shape in data.shapes
+            %polyline.chart-lines-line{ class: shape.class, points: shape.points }
+          - if data.has_end_labels
+            - for shape in data.shapes
+              %polyline.chart-lines-end{ class: shape.class, points: shape.end }
+        .chart-cols
+          - for col in data.columns
+            .chart-col.chart-tip-host{ style: col.style, tabindex: "0" }
+              .chart-col-line{ style: col.line_style }
+              = render "chart/tip", data: col.tip
+        = render "chart/events", data: data.events
+      - if data.has_end_labels
+        .chart-lines-labels
+          - for label in data.end_labels
+            %span.chart-lines-label{ class: label.class, style: label.style }
+              %span.chart-lines-label-name
+                = label.label
+              %span.chart-lines-label-value
+                = label.value
+      .chart-axis-dates
+        - for d in data.dates
+          %span
+            = d
+    - if data.has_legend
+      = render "chart/legend", keys: data.legend, title: ""

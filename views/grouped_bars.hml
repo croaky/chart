@@ -1,0 +1,27 @@
+-# A bar for each series, grouped by category: a chart.GroupedBars.
+-#
+-# The column hosts one tip that reads each series at its category,
+-# which is the comparison the grouping is for. A bar with a URL is a
+-# link to the rows behind it.
+- if data.has_chart
+  .chart-bars.chart-bars--grouped
+    .chart-axis-y.chart-axis-y--even
+      - for tick in data.ticks
+        %span.chart-axis-y-tick
+          = tick
+    .chart-bars-plot
+      - for col in data.cols
+        .chart-bars-col.chart-tip-host{ tabindex: "0" }
+          .chart-bars-group
+            - for bar in col.bars
+              .chart-bars-track
+                - if bar.url != ""
+                  %a.chart-bars-bar{ class: bar.class, style: bar.style, href: bar.url, "aria-label": "#{bar.series}: #{bar.value}" }
+                - else
+                  .chart-bars-bar{ class: bar.class, style: bar.style }
+                %span.chart-bars-count
+                  = bar.value
+          %span.chart-axis-x
+            = col.axis
+          = render "chart/tip", data: col.tip
+  = render "chart/legend", keys: data.legend, title: data.legend_title

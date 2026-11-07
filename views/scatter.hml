@@ -1,0 +1,27 @@
+-# A dot for each point on two axes: a chart.Scatter.
+-#
+-# Each dot is a div that Go places and that hosts its tip. The grid is
+-# a rule for each tick, placed by the tick's own style, because a log
+-# axis does not space its ticks evenly.
+- if data.has_chart
+  .chart-scatter
+    .chart-plot
+      .chart-axis-y
+        - for tick in data.y_ticks
+          %span.chart-axis-y-tick{ style: tick.style }
+            = tick.label
+      .chart-plot-area
+        - for tick in data.y_ticks
+          .chart-rule.chart-rule--across{ style: tick.style }
+        - for tick in data.x_ticks
+          .chart-rule.chart-rule--down{ style: tick.style }
+        - for dot in data.dots
+          .chart-scatter-dot.chart-tip-host{ style: dot.style, tabindex: "0" }
+            = render "chart/tip", data: dot.tip
+      .chart-axis-x-ticks
+        - for tick in data.x_ticks
+          %span.chart-axis-x-tick{ style: tick.style }
+            = tick.label
+    - if data.has_omitted
+      %p.chart-note
+        = data.omitted

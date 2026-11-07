@@ -1,0 +1,10 @@
+-# Event marks over a plot: a chart.EventMarks. The marks place
+-# themselves in the plot area of the chart that renders this.
+- if data.has_marks
+  .chart-events
+    - for mark in data.marks
+      .chart-event.chart-tip-host{ style: mark.style, tabindex: "0" }
+        %span.chart-event-count
+          = mark.count
+        .chart-event-line
+        = render "chart/tip", data: mark.tip

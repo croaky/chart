@@ -1,0 +1,23 @@
+-# A mark's tip: a chart.Tip. CSS shows it when a reader points at the
+-# host it sits in, or moves focus to that host. The class from Go says
+-# which way the panel opens.
+.chart-tip{ class: data.class, role: "tooltip" }
+  - if data.has_title
+    .chart-tip-title
+      - if data.has_image
+        %img.chart-tip-image{ src: data.image, alt: "" }
+      %span
+        = data.title
+  - for line in data.lines
+    .chart-tip-line{ class: line.class }
+      - if line.has_label
+        %span.chart-tip-label
+          = line.label
+      %span.chart-tip-value
+        = line.value
+    - if line.has_names
+      .chart-tip-line-names
+        = line.names
+  - if data.has_names
+    .chart-tip-names
+      = data.names

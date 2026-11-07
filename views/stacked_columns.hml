@@ -1,0 +1,36 @@
+-# A column for each period, divided by series: a chart.StackedColumns.
+-#
+-# A short run prints a label under each column and lays out as rows on
+-# a narrow screen, like a bar chart. A long run prints no column label:
+-# the dates below name the ends of the range and its middle, and it
+-# keeps its columns at every width. Each column names its own period in
+-# its tip. A segment with a URL is a link to the rows behind it.
+- if data.has_chart
+  .chart-bars.chart-bars--stacked{ class: data.class }
+    .chart-axis-y.chart-axis-y--even
+      - for tick in data.ticks
+        %span.chart-axis-y-tick
+          = tick
+    .chart-bars-plot
+      - for col in data.cols
+        .chart-bars-col.chart-tip-host{ class: col.class, tabindex: "0" }
+          .chart-bars-track
+            .chart-bars-stack
+              - for seg in col.segments
+                - if seg.url != ""
+                  %a.chart-bars-segment{ class: seg.class, style: seg.style, href: seg.url, "aria-label": "#{seg.series}: #{seg.count}" }
+                - else
+                  .chart-bars-segment{ class: seg.class, style: seg.style }
+          %span.chart-bars-count
+            = col.total
+          - if data.labeled
+            %span.chart-axis-x
+              = col.axis
+          = render "chart/tip", data: col.tip
+      = render "chart/events", data: data.events
+  - if data.has_dates
+    .chart-axis-dates.chart-axis-dates--bars
+      - for d in data.dates
+        %span
+          = d
+  = render "chart/legend", keys: data.legend, title: data.legend_title

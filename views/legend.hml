@@ -1,0 +1,12 @@
+-# A legend: keys, a []chart.LegendKey, and title, the chart's title or
+-# "". Each swatch wears the class of the marks it names, so a key
+-# cannot drift from its series.
+.chart-legend
+  - if title != ""
+    %span.chart-legend-title
+      = title
+  - for key in keys
+    %span.chart-legend-key
+      %span.chart-legend-swatch{ class: key.class }
+      %span
+        = key.label

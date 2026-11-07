@@ -1,0 +1,20 @@
+-# A grid of counts on a color ramp: a chart.Heatmap. Rows run up from
+-# the first label. A cell hosts its tip on hover only: a grid of a few
+-# hundred cells in the tab order would make the page slow to cross with
+-# a keyboard.
+- if data.has_chart
+  .chart-heatmap{ "data-chart-from": data.from, "data-chart-to": data.to }
+    .chart-heatmap-axis
+      - for label in data.y_labels
+        %span
+          = label
+    .chart-heatmap-plot
+      - for col in data.cols
+        .chart-heatmap-col
+          - for cell in col.cells
+            .chart-heatmap-cell.chart-tip-host{ class: cell.class }
+              = render "chart/tip", data: cell.tip
+    .chart-axis-dates
+      - for d in data.dates
+        %span
+          = d

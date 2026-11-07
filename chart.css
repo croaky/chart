@@ -1,0 +1,773 @@
+/*
+  The stylesheet for the views of github.com/croaky/chart.
+
+  Go computes each position. This sheet reads it from a custom property
+  that a view sets inline: --chart-at, --chart-left, --chart-width,
+  --chart-pct, --chart-x, and --chart-y. A media query then decides how
+  to spend the number, as a height on a wide screen or as a width on a
+  narrow one.
+
+  Each rule spends a token from the app's own scale, with a fallback,
+  so a chart is the same size and color as the page around it. The
+  sheet works with no token set. The tokens it reads:
+
+    --color--text, --color--text-light         labels, and quiet labels
+    --color--border-base, --color--border-dark rules, and crosshairs
+    --color--bg-secondary                      the tip panel
+    --color--accent                            scatter dots and focus
+    --color--series-1 to --color--series-10    the series palette
+    --color--ramp-1 to --color--ramp-8         the heatmap ramp
+    --font-size--small                         axis, legend, and tip text
+    --font-weight--normal, --font-weight--bold
+    --line-height--tight
+    --spacing--x-small, --spacing--small
+    --border-radius--base, --box-shadow--base
+    --z-index--component                       an open tip's host
+    --chart-height                             the plot of a chart
+    --chart-sparkline-height                   the plot of a sparkline
+    --chart-y-axis-width                       the y axis
+    --chart-x-label-height                     a label under a column
+    --chart-bar-share                          a bar's share of its column
+
+  A size that is not a step of spacing keeps a literal: a 1px rule, a
+  dot, a swatch, and the width of a row label.
+*/
+
+@layer components {
+  .chart-lines,
+  .chart-scatter,
+  .chart-sparkline,
+  .chart-bars,
+  .chart-heatmap,
+  .chart-legend,
+  .chart-axis-dates,
+  .chart-note {
+    color: var(--color--text, CanvasText);
+    font-size: var(--font-size--small, 0.8rem);
+  }
+
+  /* The series palette: categorical, so neighbors look unrelated.
+     Each class sets --chart-mark once, and one rule spends it on the
+     stroke of a line, the fill of a bar, and the swatch of a key. */
+  .chart-series {
+    background-color: var(--chart-mark);
+    fill: var(--chart-mark);
+    stroke: var(--chart-mark);
+  }
+
+  .chart-series--1 {
+    --chart-mark: var(--color--series-1, light-dark(#1e66f5, #8caaee));
+  }
+
+  .chart-series--2 {
+    --chart-mark: var(--color--series-2, light-dark(#fe640b, #ef9f76));
+  }
+
+  .chart-series--3 {
+    --chart-mark: var(--color--series-3, light-dark(#40a02b, #a6d189));
+  }
+
+  .chart-series--4 {
+    --chart-mark: var(--color--series-4, light-dark(#8839ef, #ca9ee6));
+  }
+
+  .chart-series--5 {
+    --chart-mark: var(--color--series-5, light-dark(#df8e1d, #e5c890));
+  }
+
+  .chart-series--6 {
+    --chart-mark: var(--color--series-6, light-dark(#ea76cb, #f4b8e4));
+  }
+
+  .chart-series--7 {
+    --chart-mark: var(--color--series-7, light-dark(#179299, #81c8be));
+  }
+
+  .chart-series--8 {
+    --chart-mark: var(--color--series-8, light-dark(#dd7878, #ea999c));
+  }
+
+  .chart-series--9 {
+    --chart-mark: var(--color--series-9, light-dark(#04a5e5, #85c1dc));
+  }
+
+  .chart-series--10 {
+    --chart-mark: var(--color--series-10, light-dark(#7287fd, #babbf1));
+  }
+
+  /* The heatmap ramp: ordered, so neighbors look related. */
+  .chart-ramp {
+    background-color: var(--chart-mark);
+  }
+
+  .chart-ramp--1 {
+    --chart-mark: var(--color--ramp-1, light-dark(#e3f2fd, #303446));
+  }
+
+  .chart-ramp--2 {
+    --chart-mark: var(--color--ramp-2, light-dark(#cbe7f8, #414559));
+  }
+
+  .chart-ramp--3 {
+    --chart-mark: var(--color--ramp-3, light-dark(#a7d1ee, #51576d));
+  }
+
+  .chart-ramp--4 {
+    --chart-mark: var(--color--ramp-4, light-dark(#709ec5, #8caaee));
+  }
+
+  .chart-ramp--5 {
+    --chart-mark: var(--color--ramp-5, light-dark(#3b658d, #ca9ee6));
+  }
+
+  .chart-ramp--6 {
+    --chart-mark: var(--color--ramp-6, light-dark(#f6a89e, #ef9f76));
+  }
+
+  .chart-ramp--7 {
+    --chart-mark: var(--color--ramp-7, light-dark(#ea796f, #ea999c));
+  }
+
+  .chart-ramp--8 {
+    --chart-mark: var(--color--ramp-8, light-dark(#cc4844, #e78284));
+  }
+
+  /* A plot with a continuous axis: the y axis, the plot area, an
+     optional column of end labels, and a row of labels under the
+     plot area. */
+  .chart-plot {
+    column-gap: var(--spacing--small, 0.5rem);
+    display: grid;
+    grid-template-columns: var(--chart-y-axis-width, 2.25rem) minmax(0, 1fr) auto;
+    grid-template-rows: var(--chart-height, 12rem) auto;
+  }
+
+  .chart-axis-y {
+    grid-column: 1;
+    grid-row: 1;
+    position: relative;
+    text-align: right;
+
+    .chart-axis-y-tick {
+      bottom: var(--chart-at);
+      line-height: 1;
+      position: absolute;
+      right: 0;
+      transform: translateY(50%);
+      white-space: nowrap;
+    }
+  }
+
+  /* A bar chart's y axis spaces its labels evenly from the top of the
+     axis to zero, so the labels need no positions. */
+  .chart-axis-y--even {
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    height: var(--chart-height, 12rem);
+    justify-content: space-between;
+    padding-bottom: var(--chart-x-label-height, 1.5rem);
+    width: var(--chart-y-axis-width, 2.25rem);
+
+    .chart-axis-y-tick {
+      position: static;
+      transform: translateY(50%);
+    }
+  }
+
+  .chart-plot-area {
+    grid-column: 2;
+    grid-row: 1;
+    position: relative;
+  }
+
+  .chart-plot-svg {
+    display: block;
+    height: 100%;
+    inset: 0;
+    overflow: visible;
+    position: absolute;
+    width: 100%;
+  }
+
+  .chart-plot-zero {
+    stroke: var(--color--border-dark, GrayText);
+    stroke-dasharray: 4 3;
+    stroke-width: 1px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .chart-rule {
+    background-color: var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent));
+    position: absolute;
+  }
+
+  .chart-rule--across {
+    bottom: var(--chart-at);
+    height: 1px;
+    left: 0;
+    right: 0;
+  }
+
+  .chart-rule--down {
+    bottom: 0;
+    left: var(--chart-at);
+    top: 0;
+    width: 1px;
+  }
+
+  .chart-axis-dates {
+    display: flex;
+    grid-column: 2;
+    grid-row: 2;
+    justify-content: space-between;
+    margin-top: var(--spacing--x-small, 0.25rem);
+    white-space: nowrap;
+  }
+
+  /* Under a bar chart the dates sit outside the grid, so they step past
+     the y axis themselves. */
+  .chart-axis-dates--bars {
+    margin-left: calc(var(--chart-y-axis-width, 2.25rem) + var(--spacing--small, 0.5rem));
+  }
+
+  .chart-axis-x-ticks {
+    grid-column: 2;
+    grid-row: 2;
+    height: var(--chart-x-label-height, 1.5rem);
+    position: relative;
+
+    .chart-axis-x-tick {
+      left: var(--chart-at);
+      position: absolute;
+      top: var(--spacing--x-small, 0.25rem);
+      transform: translateX(-50%);
+      white-space: nowrap;
+    }
+  }
+
+  /* After .chart-series, so a line is a stroke and not a filled
+     polygon. non-scaling-stroke keeps the width even where the SVG
+     stretches. */
+  .chart-lines-line {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  /* A zero-length line with a round cap draws a dot that stays round
+     when the SVG stretches. */
+  .chart-lines-end {
+    fill: none;
+    stroke-linecap: round;
+    stroke-width: 7px;
+    vector-effect: non-scaling-stroke;
+  }
+
+  .chart-lines-labels {
+    grid-column: 3;
+    grid-row: 1;
+    min-width: 4rem;
+    position: relative;
+  }
+
+  /* After .chart-series: an end label wears the series color as text,
+     not as a background. */
+  .chart-lines-label {
+    background-color: transparent;
+    bottom: var(--chart-at);
+    color: var(--chart-mark);
+    display: flex;
+    gap: var(--spacing--x-small, 0.25rem);
+    left: 0;
+    line-height: 1;
+    position: absolute;
+    transform: translateY(50%);
+    white-space: nowrap;
+
+    .chart-lines-label-name {
+      font-weight: var(--font-weight--normal, 400);
+    }
+
+    .chart-lines-label-value {
+      font-variant-numeric: tabular-nums;
+      font-weight: var(--font-weight--bold, 600);
+    }
+  }
+
+  /* Hover bands: one for each date, placed by Go. */
+  .chart-cols {
+    inset: 0;
+    position: absolute;
+  }
+
+  .chart-col {
+    bottom: 0;
+    left: var(--chart-left);
+    position: absolute;
+    top: 0;
+    width: var(--chart-width);
+  }
+
+  .chart-col-line {
+    background-color: var(--color--border-dark, color-mix(in srgb, CanvasText 40%, transparent));
+    bottom: 0;
+    left: var(--chart-at);
+    opacity: 0;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    transition: opacity 100ms ease;
+    width: 1px;
+  }
+
+  /* The tip. visibility and not display, so the panel can fade, and so
+     it leaves the accessibility tree while hidden. The delay keeps a
+     pointer that crosses two columns from flashing a panel at each. */
+  .chart-tip-host {
+    position: relative;
+
+    &:is(:hover, :focus-visible, :focus-within) {
+      z-index: var(--z-index--component, 10);
+
+      > .chart-tip,
+      > .chart-col-line {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color--accent, Highlight);
+      outline-offset: -2px;
+    }
+  }
+
+  .chart-tip {
+    background-color: var(--color--bg-secondary, Canvas);
+    border: 1px solid var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent));
+    border-radius: var(--border-radius--base, 3px);
+    box-shadow: var(--box-shadow--base, 0 4px 12px rgb(0 0 0 / 15%));
+    color: var(--color--text, CanvasText);
+    font-size: var(--font-size--small, 0.8rem);
+    line-height: var(--line-height--tight, 1.2);
+    margin-top: var(--spacing--x-small, 0.25rem);
+    max-width: min(20rem, 80vw);
+    opacity: 0;
+    padding: var(--spacing--x-small, 0.25rem) var(--spacing--small, 0.5rem);
+    pointer-events: none;
+    position: absolute;
+    text-align: left;
+    top: 100%;
+    transition: opacity 100ms ease 120ms, visibility 100ms ease 120ms;
+    visibility: hidden;
+    width: max-content;
+
+    .chart-tip-title {
+      align-items: center;
+      display: flex;
+      font-weight: var(--font-weight--bold, 600);
+      gap: var(--spacing--x-small, 0.25rem);
+      margin-bottom: var(--spacing--x-small, 0.25rem);
+      white-space: nowrap;
+    }
+
+    .chart-tip-image {
+      border-radius: var(--border-radius--base, 3px);
+      height: 1rem;
+      object-fit: contain;
+      width: 1rem;
+    }
+
+    .chart-tip-line {
+      display: flex;
+      gap: var(--spacing--small, 0.5rem);
+      justify-content: space-between;
+      white-space: nowrap;
+    }
+
+    .chart-tip-line--sub {
+      padding-left: var(--spacing--small, 0.5rem);
+    }
+
+    .chart-tip-label {
+      color: var(--color--text-light, GrayText);
+    }
+
+    .chart-tip-value {
+      font-variant-numeric: tabular-nums;
+    }
+
+    .chart-tip-line-names,
+    .chart-tip-names {
+      color: var(--color--text-light, GrayText);
+      white-space: normal;
+    }
+
+    .chart-tip-names {
+      border-top: 1px solid var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent));
+      margin-top: var(--spacing--x-small, 0.25rem);
+      padding-top: var(--spacing--x-small, 0.25rem);
+    }
+  }
+
+  .chart-tip--left {
+    left: 0;
+  }
+
+  .chart-tip--right {
+    right: 0;
+  }
+
+  .chart-tip--center {
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  /* Categorical bars: columns on a wide screen, rows on a narrow one,
+     from the same markup. */
+  .chart-bars {
+    display: flex;
+    gap: var(--spacing--small, 0.5rem);
+  }
+
+  .chart-bars-plot {
+    display: flex;
+    flex: 1;
+    height: var(--chart-height, 12rem);
+    min-width: 0;
+    /* The event marks place themselves in the plot. */
+    position: relative;
+  }
+
+  .chart-bars-col {
+    align-items: center;
+    background: linear-gradient(
+      var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent)),
+      var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent))
+    ) left 0 bottom var(--chart-x-label-height, 1.5rem) / 100% 1px no-repeat;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: 100%;
+    min-width: 0;
+  }
+
+  .chart-bars-track {
+    align-items: flex-end;
+    display: flex;
+    flex: 1;
+    justify-content: center;
+    min-height: 0;
+    width: 100%;
+  }
+
+  .chart-bars-bar {
+    border-radius: var(--border-radius--base, 3px) var(--border-radius--base, 3px) 0 0;
+    height: var(--chart-pct);
+    min-height: 1px;
+    transition: opacity 150ms ease;
+    width: var(--chart-bar-share, 60%);
+  }
+
+  .chart-bars-group {
+    display: flex;
+    flex: 1;
+    gap: 1px;
+    min-height: 0;
+    width: var(--chart-bar-share, 60%);
+
+    .chart-bars-bar {
+      width: 100%;
+    }
+  }
+
+  .chart-bars-stack {
+    display: flex;
+    flex-direction: column-reverse;
+    height: 100%;
+    width: var(--chart-bar-share, 60%);
+  }
+
+  .chart-bars-segment {
+    height: var(--chart-pct);
+    min-height: 1px;
+    transition: opacity 150ms ease;
+  }
+
+  .chart-tip-host:is(:hover, :focus-within) :is(.chart-bars-bar, .chart-bars-segment) {
+    opacity: 0.8;
+  }
+
+  a:is(.chart-bars-bar, .chart-bars-segment):hover {
+    filter: brightness(0.85);
+  }
+
+  .chart-bars-plot:has(.chart-bars-col--selected) .chart-bars-col:not(.chart-bars-col--selected) .chart-bars-segment {
+    opacity: 0.35;
+  }
+
+  .chart-bars-col--selected .chart-axis-x {
+    font-weight: var(--font-weight--bold, 600);
+  }
+
+  .chart-bars-count {
+    display: none;
+    flex-shrink: 0;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .chart-axis-x {
+    height: var(--chart-x-label-height, 1.5rem);
+    line-height: var(--chart-x-label-height, 1.5rem);
+    overflow: hidden;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: 100%;
+  }
+
+  /* A long run prints no label under its columns, so its baseline and
+     its axis reach the bottom of the plot. */
+  .chart-bars--long {
+    .chart-axis-y--even {
+      padding-bottom: 0;
+    }
+
+    .chart-bars-col {
+      background-position: left 0 bottom 0;
+    }
+  }
+
+  /* The grouped and the stacked views add these to name the chart, so
+     an app can add a rule for one of them. They need nothing beyond
+     what .chart-bars gives. */
+  .chart-bars--grouped,
+  .chart-bars--stacked {
+    min-width: 0;
+  }
+
+  /* Rows below 70em. A strict width < query, so a screen exactly 70em
+     wide gets one layout and not both. The query limits itself to a
+     labeled run, so a long run keeps its columns and no rule has to
+     undo this one. */
+  @media (width < 70em) {
+    .chart-bars:not(.chart-bars--long) {
+      display: block;
+
+      .chart-axis-y--even {
+        display: none;
+      }
+
+      .chart-bars-plot {
+        flex-direction: column;
+        gap: var(--spacing--x-small, 0.25rem);
+        height: auto;
+      }
+
+      .chart-bars-col {
+        background: none;
+        flex-direction: row;
+        gap: var(--spacing--small, 0.5rem);
+        height: auto;
+        min-height: 1.25rem;
+      }
+
+      .chart-axis-x {
+        flex-shrink: 0;
+        height: auto;
+        line-height: var(--line-height--tight, 1.2);
+        order: -1;
+        overflow: visible;
+        text-align: left;
+        white-space: normal;
+        width: 7rem;
+      }
+
+      .chart-bars-count {
+        display: block;
+      }
+
+      .chart-bars-track,
+      .chart-bars-group,
+      .chart-bars-stack {
+        align-items: center;
+        flex-direction: row;
+        height: auto;
+        justify-content: flex-start;
+        min-width: 0;
+        width: 100%;
+      }
+
+      .chart-bars-group {
+        flex-direction: column;
+        gap: 2px;
+      }
+
+      .chart-bars-bar {
+        border-radius: var(--border-radius--base, 3px);
+        height: 0.75rem;
+        min-width: 1px;
+        width: var(--chart-pct);
+      }
+
+      .chart-bars-group .chart-bars-bar {
+        width: var(--chart-pct);
+      }
+
+      .chart-bars-segment {
+        height: 0.75rem;
+        min-width: 1px;
+        width: var(--chart-pct);
+      }
+    }
+  }
+
+  .chart-scatter-dot {
+    background-color: var(--color--accent, light-dark(#1e66f5, #8caaee));
+    border: 1px solid var(--color--bg-secondary, Canvas);
+    border-radius: 50%;
+    bottom: var(--chart-y);
+    height: 0.5rem;
+    left: var(--chart-x);
+    opacity: 0.85;
+    position: absolute;
+    transform: translate(-50%, 50%);
+    width: 0.5rem;
+
+    &:is(:hover, :focus-visible) {
+      opacity: 1;
+    }
+  }
+
+  .chart-note {
+    color: var(--color--text-light, GrayText);
+    margin: var(--spacing--x-small, 0.25rem) 0 0;
+  }
+
+  .chart-events {
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .chart-event {
+    align-items: center;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    left: var(--chart-at);
+    pointer-events: auto;
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+
+    .chart-event-count {
+      background-color: var(--color--bg-secondary, Canvas);
+      border: 1px solid var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent));
+      border-radius: var(--border-radius--base, 3px);
+      font-weight: var(--font-weight--bold, 600);
+      line-height: 1rem;
+      padding: 0 var(--spacing--x-small, 0.25rem);
+    }
+
+    .chart-event-line {
+      border-left: 1px dashed var(--color--border-dark, color-mix(in srgb, CanvasText 40%, transparent));
+      flex: 1;
+      width: 1px;
+    }
+  }
+
+  .chart-heatmap {
+    column-gap: var(--spacing--small, 0.5rem);
+    display: grid;
+    grid-template-columns: var(--chart-y-axis-width, 2.25rem) minmax(0, 1fr);
+    grid-template-rows: var(--chart-height, 12rem) auto;
+  }
+
+  .chart-heatmap-axis {
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: space-around;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .chart-heatmap-plot {
+    display: flex;
+    gap: 1px;
+  }
+
+  .chart-heatmap-col {
+    display: flex;
+    flex: 1;
+    flex-direction: column-reverse;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  .chart-heatmap-cell {
+    border-radius: 1px;
+    flex: 1;
+    min-height: 2px;
+  }
+
+  .chart-sparkline {
+    column-gap: var(--spacing--small, 0.5rem);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-rows: var(--chart-sparkline-height, 4rem) auto;
+  }
+
+  .chart-sparkline-axis {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    line-height: 1;
+    text-align: right;
+  }
+
+  .chart-sparkline-svg {
+    display: block;
+    height: 100%;
+    overflow: visible;
+    width: 100%;
+  }
+
+  .chart-sparkline-dates {
+    display: flex;
+    grid-column: 2;
+    justify-content: space-between;
+    margin-top: var(--spacing--x-small, 0.25rem);
+  }
+
+  .chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing--x-small, 0.25rem) var(--spacing--small, 0.5rem);
+    line-height: 1;
+    margin-top: var(--spacing--small, 0.5rem);
+  }
+
+  .chart-legend-title {
+    font-weight: var(--font-weight--bold, 600);
+    white-space: nowrap;
+  }
+
+  .chart-legend-key {
+    align-items: center;
+    display: flex;
+    gap: var(--spacing--x-small, 0.25rem);
+    white-space: nowrap;
+  }
+
+  /* The swatch is square: it is a key, not a control. */
+  .chart-legend-swatch {
+    border-radius: var(--border-radius--base, 3px);
+    flex-shrink: 0;
+    height: 0.625rem;
+    width: 0.625rem;
+  }
+}

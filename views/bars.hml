@@ -1,0 +1,23 @@
+-# A bar for each category: a chart.Bars.
+-#
+-# The column hosts the tip, not the bar, so a reader can point anywhere
+-# in the column. It is focusable, so the tip also opens on focus. On a
+-# narrow screen CSS lays the same markup out as rows: the label moves
+-# beside its bar, and the row prints the value the axis has no room
+-# for.
+- if data.has_chart
+  .chart-bars
+    .chart-axis-y.chart-axis-y--even
+      - for tick in data.ticks
+        %span.chart-axis-y-tick
+          = tick
+    .chart-bars-plot
+      - for bar in data.bars
+        .chart-bars-col.chart-tip-host{ tabindex: "0" }
+          .chart-bars-track
+            .chart-bars-bar{ class: bar.class, style: bar.style }
+          %span.chart-bars-count
+            = bar.value
+          %span.chart-axis-x
+            = bar.label
+          = render "chart/tip", data: bar.tip
