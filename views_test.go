@@ -435,3 +435,25 @@ func TestCSSSpendsTokens(t *testing.T) {
 		}
 	}
 }
+
+// A rule that sets a height and a padding gets the height it names only
+// under box-sizing: border-box. The sheet sits on pages with no reset,
+// so a rule that sets both sets box-sizing too.
+func TestCSSSizesPaddedBoxes(t *testing.T) {
+	t.Parallel()
+
+	height := regexp.MustCompile(`(?m)^\s*height:`)
+	padding := regexp.MustCompile(`(?m)^\s*padding(?:-[a-z]+)?:`)
+	// Check each innermost block, then drop it, so a block that held a
+	// nested rule is checked on its own declarations next.
+	inner := regexp.MustCompile(`\{([^{}]*)\}`)
+	css := cssComment.ReplaceAllString(CSS, "")
+	for inner.MatchString(css) {
+		for _, body := range inner.FindAllStringSubmatch(css, -1) {
+			if height.MatchString(body[1]) && padding.MatchString(body[1]) && !strings.Contains(body[1], "box-sizing: border-box") {
+				t.Errorf("a rule sets a height and a padding with no box-sizing: border-box:%s", body[1])
+			}
+		}
+		css = inner.ReplaceAllString(css, "")
+	}
+}

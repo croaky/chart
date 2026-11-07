@@ -167,6 +167,7 @@
   /* A bar chart's y axis spaces its labels evenly from the top of the
      axis to zero, so the labels need no positions. */
   .chart-axis-y--even {
+    box-sizing: border-box;
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
