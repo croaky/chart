@@ -52,12 +52,15 @@ func TestTimeTicks(t *testing.T) {
 
 	noon := day0.Add(12 * time.Hour)
 	est := time.FixedZone("EST", -5*60*60)
-	is.Eq(TimeTicks(noon, noon.Add(6*time.Hour), nil), []string{"12:00", "15:00", "18:00"})
-	is.Eq(TimeTicks(noon, noon.Add(6*time.Hour), est), []string{"07:00", "10:00", "13:00"})
-	is.Eq(TimeTicks(noon, noon.Add(36*time.Hour), nil), []string{"Jan 5 12:00", "Jan 6 06:00", "Jan 7 00:00"})
-	is.Eq(TimeTicks(day0, day0.AddDate(0, 0, 4), nil), []string{"Jan 5", "Jan 7", "Jan 9"})
-	is.Eq(TimeTicks(day0, day0.AddDate(1, 0, 0), nil), []string{"Jan 2026", "Jul 2026", "Jan 2027"})
-	is.Eq(TimeTicks(noon, noon, nil), []string{"Jan 5 12:00"})
+	is.Eq(TimeTicks(noon, noon.Add(6*time.Hour)), []string{"12:00", "15:00", "18:00"})
+	is.Eq(TimeTicks(noon, noon.Add(6*time.Hour), WithLocation(est)), []string{"07:00", "10:00", "13:00"})
+	is.Eq(TimeTicks(noon, noon.Add(36*time.Hour)), []string{"Jan 5 12:00", "Jan 6 06:00", "Jan 7 00:00"})
+	is.Eq(TimeTicks(day0, day0.AddDate(0, 0, 4)), []string{"Jan 5", "Jan 7", "Jan 9"})
+	is.Eq(TimeTicks(day0, day0.AddDate(1, 0, 0)), []string{"Jan 2026", "Jul 2026", "Jan 2027"})
+	is.Eq(TimeTicks(noon, noon), []string{"Jan 5 12:00"})
+	// One date at midnight is a day, not a time of day.
+	is.Eq(TimeTicks(day0, day0), []string{"Jan 5, 2026"})
+	is.Eq(TimeTicks(day0, day0, WithLocation(est)), []string{"Jan 4 19:00"})
 }
 
 // A band runs halfway to each neighbor, and its crosshair sits at its

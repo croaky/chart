@@ -132,14 +132,20 @@
     --chart-mark: var(--color--ramp-8, light-dark(#cc4844, #e78284));
   }
 
-  /* A plot with a continuous axis: the y axis, the plot area, an
-     optional column of end labels, and a row of labels under the
-     plot area. */
+  /* A plot with a continuous axis: the y axis, the plot area, and a
+     row of labels under the plot area. A plot with end labels adds a
+     third track for them. An empty third track would still take a
+     column gap, so a line plot would end short of a bar plot above
+     it, and a crosshair linked across the two would miss. */
   .chart-plot {
     column-gap: var(--spacing--small, 0.5rem);
     display: grid;
-    grid-template-columns: var(--chart-y-axis-width, 2.25rem) minmax(0, 1fr) auto;
+    grid-template-columns: var(--chart-y-axis-width, 2.25rem) minmax(0, 1fr);
     grid-template-rows: var(--chart-height, 12rem) auto;
+
+    &:has(> .chart-lines-labels) {
+      grid-template-columns: var(--chart-y-axis-width, 2.25rem) minmax(0, 1fr) auto;
+    }
   }
 
   .chart-axis-y {

@@ -130,7 +130,7 @@ func (a LogAxis) ticksFor(keep []float64, f Format) []AxisTick {
 			}
 			// A count has no tenth of a thing to label. A step below
 			// one prints the same label twice: 2, 2, 1, 1.
-			if (f == Count || f == Millis) && v < 1 {
+			if (f == Count || f == Signed || f == Millis) && v < 1 {
 				continue
 			}
 			ticks = append(ticks, AxisTick{Label: FormatValue(v, f), At: a.Up(v)})

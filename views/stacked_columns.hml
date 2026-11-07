@@ -18,7 +18,7 @@
             .chart-bars-stack
               - for seg in col.segments
                 - if seg.url != ""
-                  %a.chart-bars-segment{ class: seg.class, style: seg.style, href: seg.url, "aria-label": "#{seg.series}: #{seg.count}" }
+                  %a.chart-bars-segment{ class: seg.class, style: seg.style, href: seg.url, "aria-label": "#{seg.series}: #{seg.count}", **seg.link_attrs }
                 - else
                   .chart-bars-segment{ class: seg.class, style: seg.style }
           %span.chart-bars-count

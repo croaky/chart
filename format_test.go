@@ -99,6 +99,19 @@ func TestFormatValueDegenerate(t *testing.T) {
 	is.Eq(FormatValue(math.Inf(1), USD), "–")
 }
 
+// A signed value prints its sign, and zero prints none.
+func TestFormatValueSigned(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	is.Eq(FormatValue(6, Signed), "+6")
+	is.Eq(FormatValue(-6, Signed), "−6")
+	is.Eq(FormatValue(0, Signed), "0")
+	is.Eq(FormatValue(-0.2, Signed), "0")
+	is.Eq(FormatValue(12_345, Signed), "+12,345")
+	is.Eq(NewValueAxis(-6, 6, Signed).Labels(), []string{"+6", "+4", "+2", "0", "−2", "−4", "−6"})
+}
+
 func TestPluralize(t *testing.T) {
 	t.Parallel()
 	is := is.New(t)

@@ -7,6 +7,6 @@
       = title
   - for key in keys
     %span.chart-legend-key
-      %span.chart-legend-swatch{ class: key.class }
+      %span.chart-legend-swatch{ class: key.class, **key.attrs }
       %span
         = key.label

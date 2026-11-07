@@ -31,6 +31,10 @@ const (
 	// Millis is a duration in milliseconds. It prints the unit that
 	// keeps the number short: 850ms, 1.2s, 3m, 2h.
 	Millis
+	// Signed is a count read as a distance from zero, such as an
+	// anomaly. It prints the sign of each value: +6, 0, −6. The minus
+	// is U+2212, the width of the plus, so the digits line up.
+	Signed
 )
 
 // FormatValue prints a number for an axis label or a tip.
@@ -44,7 +48,15 @@ func FormatValue(v float64, f Format) string {
 	}
 	s := formatAbs(math.Abs(v), f)
 	// A value that rounds to zero prints as zero, never as -0.
-	if v < 0 && strings.Trim(s, "0.$%ms") != "" {
+	if strings.Trim(s, "0.$%ms") == "" {
+		return s
+	}
+	switch {
+	case f == Signed && v < 0:
+		return "−" + s
+	case f == Signed:
+		return "+" + s
+	case v < 0:
 		return "-" + s
 	}
 	return s

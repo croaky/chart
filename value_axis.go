@@ -57,7 +57,7 @@ func NewValueAxis(lo, hi float64, f Format) ValueAxis {
 	step := niceStep(raw)
 	// A count has no fraction of a thing to label. A step below one
 	// prints the same label twice: 2, 2, 1, 1, 0.
-	if (f == Count || f == Millis || (f == Percent && hi-lo >= 1)) && step < 1 {
+	if (f == Count || f == Signed || f == Millis || (f == Percent && hi-lo >= 1)) && step < 1 {
 		step = 1
 	}
 

@@ -1,6 +1,8 @@
 package chart
 
 import (
+	"maps"
+	"slices"
 	"strconv"
 
 	"github.com/croaky/hml"
@@ -26,13 +28,17 @@ type GroupedColumn struct {
 
 // GroupedBar is one bar: one series in one category. Style sets
 // --chart-pct, as [Bar.Style] does.
+//
+// LinkAttrs holds the attributes of [GroupedBars.WithLinkAttr], and is
+// nil for a bar with no URL.
 type GroupedBar struct {
-	Series string      `json:"series"`
-	Class  string      `json:"class"`
-	Count  int         `json:"count"`
-	Value  string      `json:"value"`
-	Style  hml.SafeCSS `json:"style"`
-	URL    string      `json:"url"`
+	Series    string         `json:"series"`
+	Class     string         `json:"class"`
+	Count     int            `json:"count"`
+	Value     string         `json:"value"`
+	Style     hml.SafeCSS    `json:"style"`
+	URL       string         `json:"url"`
+	LinkAttrs map[string]any `json:"link_attrs"`
 }
 
 // GroupedCol is one category: its label, a bar for each series, and
@@ -154,6 +160,38 @@ func NewValueGroupedBars(f Format, series []LegendKey, cols []ValueGroupedColumn
 		out = append(out, GroupedCol{Label: c.Label, Axis: axisLabel(c.Label, c.Axis), Bars: bars, Tip: tip})
 	}
 	return GroupedBars{HasChart: true, Cols: out, Ticks: axis.Labels(), Legend: series}
+}
+
+// WithLinkAttr returns the chart with one more attribute on the link of
+// each bar that has a URL: the attribute name, with the URL as its
+// value. A page whose script swaps a link's target into the page, such
+// as one that reads an ajax-get attribute, names its attribute here.
+// The chart it is called on stays as it was.
+func (g GroupedBars) WithLinkAttr(name string) GroupedBars {
+	cols := slices.Clone(g.Cols)
+	for i := range cols {
+		bars := slices.Clone(cols[i].Bars)
+		for j := range bars {
+			bars[j].LinkAttrs = withLinkAttr(bars[j].LinkAttrs, name, bars[j].URL)
+		}
+		cols[i].Bars = bars
+	}
+	g.Cols = cols
+	return g
+}
+
+// withLinkAttr is attrs with name set to url, in a new map, or attrs
+// unchanged for a mark with no URL.
+func withLinkAttr(attrs map[string]any, name, url string) map[string]any {
+	if url == "" {
+		return attrs
+	}
+	out := maps.Clone(attrs)
+	if out == nil {
+		out = map[string]any{}
+	}
+	out[name] = url
+	return out
 }
 
 // axisLabel is what a column prints under it: its axis label, or its

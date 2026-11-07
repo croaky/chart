@@ -5,6 +5,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/croaky/hml"
 	"github.com/croaky/is"
 )
 
@@ -217,6 +218,45 @@ func TestLinesLocation(t *testing.T) {
 	is.Eq(l.Dates[0], "07:00")
 }
 
+// A series color reaches each mark of the series, and a value that is
+// not a hex color goes nowhere near a style attribute.
+func TestLinesSeriesColor(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	series := []Series{
+		{Label: "a", Class: "a", Color: "#0af", Points: []Point{pt(0, 0), pt(1, 50)}},
+		{Label: "b", Class: "b", Color: "red; background: url(x)", Points: []Point{pt(0, 0), pt(1, 10)}},
+	}
+	l := NewLines(Percent, series, WithDomain(0, 100), WithEndLabels())
+
+	is.Eq(l.Shapes[0].Attrs, map[string]any{"style": hml.SafeCSS("--chart-mark: #0af")})
+	is.Nil(l.Shapes[1].Attrs)
+	is.Eq(string(l.EndLabels[0].Style), "--chart-at: 50.00%; --chart-mark: #0af")
+	is.Eq(string(l.EndLabels[1].Style), "--chart-at: 10.00%")
+	is.Eq(l.Legend[0].Attrs, map[string]any{"style": hml.SafeCSS("--chart-mark: #0af")})
+	is.Nil(l.Legend[1].Attrs)
+	// The end labels name each line, so the view draws no legend.
+	is.True(!l.HasLegend)
+}
+
+// WithClock12 prints the axis and the tip times on a 12-hour clock.
+func TestLinesClock12(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	est := time.FixedZone("EST", -5*60*60)
+	series := []Series{{Label: "a", Points: []Point{
+		{At: day0.Add(17 * time.Hour), Value: 1},
+		{At: day0.Add(18 * time.Hour), Value: 2},
+	}}}
+	l := NewLines(Count, series, WithLocation(est), WithClock12())
+
+	is.Eq(l.Dates, []string{"12:00 PM", "12:30 PM", "1:00 PM"})
+	is.Eq(l.Columns[0].Tip.Title, "Jan 5 12:00 PM")
+	is.Eq(TimeTicks(day0, day0.Add(36*time.Hour), WithClock12()), []string{"Jan 5 12:00 AM", "Jan 5 6:00 PM", "Jan 6 12:00 PM"})
+}
+
 func endAt(label string, v float64) Series {
 	return Series{Label: label, Class: label, Points: []Point{pt(0, 0), pt(1, v)}}
 }
@@ -275,8 +315,8 @@ func TestSparklineDegenerate(t *testing.T) {
 	is.True(!NewSparkline(Count, nil).HasChart)
 
 	s := NewSparkline(Count, []Series{{Label: "a", Points: []Point{pt(0, 5)}}})
-	is.Eq(s.Start, "Jan 5 00:00")
-	is.Eq(s.End, "Jan 5 00:00")
+	is.Eq(s.Start, "Jan 5, 2026")
+	is.Eq(s.End, "Jan 5, 2026")
 	is.Eq(s.Top, "6")
 	is.Eq(s.Bottom, "0")
 	is.True(!s.HasZero)

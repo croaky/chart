@@ -18,10 +18,10 @@
           - if data.has_zero
             %line.chart-plot-zero{ x1: "0%", x2: "100%", y1: data.zero_y, y2: data.zero_y }
           - for shape in data.shapes
-            %polyline.chart-lines-line{ class: shape.class, points: shape.points }
+            %polyline.chart-lines-line{ class: shape.class, points: shape.points, **shape.attrs }
           - if data.has_end_labels
             - for shape in data.shapes
-              %polyline.chart-lines-end{ class: shape.class, points: shape.end }
+              %polyline.chart-lines-end{ class: shape.class, points: shape.end, **shape.attrs }
         .chart-cols
           - for col in data.columns
             .chart-col.chart-tip-host{ style: col.style, tabindex: "0" }

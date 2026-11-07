@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"fmt"
 	"math"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -32,10 +33,29 @@ type Point struct {
 // A series brings its own class, not a color from its index. A page
 // that compares the same things across several plots needs one color
 // for each thing in all of them. See [SeriesClass].
+//
+// Color, when set, is a hex color, #rgb or #rrggbb, for a series whose
+// color is data, such as a team's own color. The views write it as
+// --chart-mark on the line, its end dot, its end label, and its legend
+// swatch, and the class still names the series. A value that is not a
+// hex color is dropped, because it goes into a style attribute.
 type Series struct {
 	Label  string
 	Class  string
+	Color  string
 	Points []Point
+}
+
+// hexColor matches the colors that [Series.Color] takes.
+var hexColor = regexp.MustCompile(`^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$`)
+
+// markAttrs are the attributes that color one mark of a series, or
+// nil for a series with no color, so the view writes no attribute.
+func markAttrs(color string) map[string]any {
+	if color == "" {
+		return nil
+	}
+	return map[string]any{"style": hml.SafeCSS("--chart-mark: " + color)}
 }
 
 // Lines is a line chart over time, with one line for each series.
@@ -90,10 +110,14 @@ type Lines struct {
 // End is the last point, written twice in the same way, so a view can
 // draw a dot at the end of the line. A circle would stretch into an
 // ellipse with the SVG.
+//
+// Attrs holds the style of a [Series.Color], and is nil for a series
+// with none. A view adds it to the line and the dot with **.
 type LineShape struct {
-	Class  string `json:"class"`
-	Points string `json:"points"`
-	End    string `json:"end"`
+	Class  string         `json:"class"`
+	Points string         `json:"points"`
+	End    string         `json:"end"`
+	Attrs  map[string]any `json:"attrs"`
 }
 
 // LineColumn is one date's hover band across the plot, placed by
@@ -126,7 +150,7 @@ const endLabelGap = 10.0
 
 // NewLines draws the series and prints each number in f. It reads the
 // options WithLog, WithDomain, WithBounds, WithBuckets, WithLocation,
-// WithEndLabels, and WithEvents.
+// WithClock12, WithEndLabels, and WithEvents.
 //
 // A point with a NaN or infinite value is a gap. A point outside
 // WithBounds does not draw. A series with no other point does not
@@ -149,15 +173,17 @@ func NewLines(f Format, series []Series, opts ...Option) Lines {
 		ViewBox:  fmt.Sprintf("0 0 %.0f %.0f", linesWidth, linesHeight),
 		Shapes:   p.shapes(),
 		YTicks:   PlacedTicks(p.axis.tickList()),
-		Dates:    TimeTicks(p.from, p.to, o.loc),
+		Dates:    TimeTicks(p.from, p.to, opts...),
 		Columns:  p.columns(f, o),
 		Legend:   seriesKeys(p.series),
-		Events:   eventMarks(o.events, p.from, p.to, o.loc),
+		Events:   eventMarks(o.events, p.from, p.to, o.clock()),
 		From:     p.from.UTC().Format(time.RFC3339),
 		To:       p.to.UTC().Format(time.RFC3339),
 	}
 	l.HasZero, l.ZeroY = p.zero()
-	l.HasLegend = len(l.Legend) > 0
+	// End labels name each line where it ends, so a legend below the
+	// plot would name each one a second time.
+	l.HasLegend = len(l.Legend) > 0 && !o.endLabels
 	if o.endLabels {
 		l.EndLabels = p.endLabels(f)
 		l.HasEndLabels = len(l.EndLabels) > 0
@@ -206,6 +232,9 @@ func newPlot(f Format, series []Series, o options) (plot, bool) {
 			continue
 		}
 		s.Points = points
+		if !hexColor.MatchString(s.Color) {
+			s.Color = ""
+		}
 		p.series = append(p.series, s)
 	}
 	if len(p.series) == 0 {
@@ -287,6 +316,7 @@ func (p plot) shapes() []LineShape {
 			Class:  s.Class,
 			Points: strings.Join(coords, " "),
 			End:    last + " " + last,
+			Attrs:  markAttrs(s.Color),
 		})
 	}
 	return shapes
@@ -326,7 +356,7 @@ func (p plot) columns(f Format, o options) []LineColumn {
 	gap := minGap(p.dates)
 	cols := make([]LineColumn, 0, len(p.dates))
 	for i, d := range p.dates {
-		tip := NewTipAt(pointLabel(d, gap, o.loc), p.xs[i]/linesWidth)
+		tip := NewTipAt(o.clock().point(d, gap), p.xs[i]/linesWidth)
 		for j, s := range p.series {
 			if v, ok := at[j][d.UnixNano()]; ok {
 				tip = tip.Line(s.Label, FormatValue(v, f))
@@ -363,6 +393,7 @@ func minGap(dates []time.Time) time.Duration {
 func (p plot) endLabels(f Format) []EndLabel {
 	type label struct {
 		end   EndLabel
+		color string
 		value float64
 		top   float64
 	}
@@ -371,6 +402,7 @@ func (p plot) endLabels(f Format) []EndLabel {
 		v := s.Points[len(s.Points)-1].Value
 		labels = append(labels, label{
 			end:   EndLabel{Label: s.Label, Value: FormatValue(v, f), Class: s.Class},
+			color: s.Color,
 			value: v,
 			top:   100 * (1 - p.axis.Up(v)),
 		})
@@ -397,6 +429,9 @@ func (p plot) endLabels(f Format) []EndLabel {
 	out := make([]EndLabel, 0, len(labels))
 	for _, l := range labels {
 		l.end.Style = atStyle(1 - l.top/100)
+		if l.color != "" {
+			l.end.Style += hml.SafeCSS("; --chart-mark: " + l.color)
+		}
 		out = append(out, l.end)
 	}
 	return out
@@ -409,7 +444,7 @@ func (p plot) endLabels(f Format) []EndLabel {
 func seriesKeys(series []Series) []LegendKey {
 	keys := make([]LegendKey, 0, len(series))
 	for _, s := range series {
-		keys = append(keys, LegendKey{Class: s.Class, Label: s.Label})
+		keys = append(keys, LegendKey{Class: s.Class, Label: s.Label, Attrs: markAttrs(s.Color)})
 	}
 	return keys
 }

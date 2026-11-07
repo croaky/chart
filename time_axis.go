@@ -63,8 +63,9 @@ func inBounds(t, from, to time.Time) bool {
 	return (from.IsZero() || !t.Before(from)) && (to.IsZero() || !t.After(to))
 }
 
-// TimeTicks labels the start, the middle, and the end of a range, in
-// loc. A nil loc is UTC.
+// TimeTicks labels the start, the middle, and the end of a range. It
+// reads the options WithLocation and WithClock12, as each builder does,
+// so a page prints one time the same way everywhere.
 //
 // The label fits the span, not the data: a time of day for a few hours,
 // a date and a time for a day or two, a date for a few months, and a
@@ -73,41 +74,60 @@ func inBounds(t, from, to time.Time) bool {
 //
 // The middle is the time halfway through the range, not the middle
 // observation. The two are the same only when the data has no gaps.
-func TimeTicks(from, to time.Time, loc *time.Location) []string {
+func TimeTicks(from, to time.Time, opts ...Option) []string {
+	c := readOptions(opts).clock()
 	if !to.After(from) {
-		return []string{spanLabel(from, 24*time.Hour, loc)}
+		return []string{c.one(from)}
 	}
 	span := to.Sub(from)
 	return []string{
-		spanLabel(from, span, loc),
-		spanLabel(from.Add(span/2), span, loc),
-		spanLabel(to, span, loc),
+		c.span(from, span),
+		c.span(from.Add(span/2), span),
+		c.span(to, span),
 	}
 }
 
-// spanLabel prints t at the precision a range of the given span needs.
-func spanLabel(t time.Time, span time.Duration, loc *time.Location) string {
-	t = t.In(orUTC(loc))
+// span prints t at the precision a range of the given span needs.
+func (c clock) span(t time.Time, span time.Duration) string {
 	switch {
 	case span <= 12*time.Hour:
-		return t.Format("15:04")
+		return c.time(t)
 	case span <= 48*time.Hour:
-		return t.Format("Jan 2 15:04")
+		return t.In(c.loc).Format("Jan 2 ") + c.time(t)
 	case span <= 120*24*time.Hour:
-		return t.Format("Jan 2")
+		return t.In(c.loc).Format("Jan 2")
 	default:
-		return t.Format("Jan 2006")
+		return t.In(c.loc).Format("Jan 2006")
 	}
 }
 
-// pointLabel names one point in the title of its tip. Points less than
-// a day apart need their time, not only their date.
-func pointLabel(t time.Time, gap time.Duration, loc *time.Location) string {
-	t = t.In(orUTC(loc))
-	if gap > 0 && gap < 24*time.Hour {
-		return t.Format("Jan 2 15:04")
+// one names the only time of an axis with no span. A time at midnight
+// is a date from daily or weekly data, and "00:00" would read as a time
+// of day nobody observed.
+func (c clock) one(t time.Time) string {
+	t = t.In(c.loc)
+	if t.Hour() == 0 && t.Minute() == 0 && t.Second() == 0 {
+		return t.Format("Jan 2, 2006")
 	}
-	return t.Format("Jan 2, 2006")
+	return t.Format("Jan 2 ") + c.time(t)
+}
+
+// point names one point in the title of its tip. Points less than a
+// day apart need their time, not only their date.
+func (c clock) point(t time.Time, gap time.Duration) string {
+	if gap > 0 && gap < 24*time.Hour {
+		return t.In(c.loc).Format("Jan 2 ") + c.time(t)
+	}
+	return t.In(c.loc).Format("Jan 2, 2006")
+}
+
+// time prints the time of day of t: 15:04, or 3:04 PM on a 12-hour
+// clock.
+func (c clock) time(t time.Time) string {
+	if c.h12 {
+		return t.In(c.loc).Format("3:04 PM")
+	}
+	return t.In(c.loc).Format("15:04")
 }
 
 // orUTC is loc, or UTC when loc is nil. A server's time.Local is

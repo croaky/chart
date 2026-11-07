@@ -85,6 +85,36 @@ func TestEventMarks(t *testing.T) {
 	is.Eq(m.Marks[1].Tip.Class, "chart-tip--center")
 }
 
+// An event's time in its tip reads on the clock of the page.
+func TestEventMarksClock12(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	m := NewEventMarks([]Event{{At: day0.Add(15 * time.Hour), Label: "deploy"}}, WithClock12())
+	is.Eq(m.Marks[0].Tip.Lines[0].Label, "3:00 PM")
+}
+
+// WithLinkAttr sets the attribute on each mark with a URL, and leaves
+// the chart it is called on as it was.
+func TestWithLinkAttr(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	s := NewStackedColumns([]string{"Met", "Won"}, nil, []StackedColumn{
+		{Label: "Q1", Counts: []int{2, 1}, URLs: []string{"/q1"}},
+	})
+	linked := s.WithLinkAttr("ajax-get")
+	is.Eq(linked.Cols[0].Segments[0].LinkAttrs, map[string]any{"ajax-get": "/q1"})
+	is.Nil(linked.Cols[0].Segments[1].LinkAttrs)
+	is.Nil(s.Cols[0].Segments[0].LinkAttrs)
+
+	g := NewGroupedBars([]string{"Met", "Won"}, []GroupedColumn{{Label: "Q1", Counts: []int{3, 1}, URLs: []string{"", "/won"}}})
+	glinked := g.WithLinkAttr("ajax-get").WithLinkAttr("data-x")
+	is.Nil(glinked.Cols[0].Bars[0].LinkAttrs)
+	is.Eq(glinked.Cols[0].Bars[1].LinkAttrs, map[string]any{"ajax-get": "/won", "data-x": "/won"})
+	is.Nil(g.Cols[0].Bars[1].LinkAttrs)
+}
+
 // A cluster lists eight events and counts the rest, at times in the
 // caller's location.
 func TestEventMarksCapAndLocation(t *testing.T) {
@@ -191,4 +221,16 @@ func TestHeatmapWithNothingToPlot(t *testing.T) {
 
 	is.True(!NewHeatmap(HeatmapArgs{}).HasChart)
 	is.True(!NewHeatmap(HeatmapArgs{XLabels: []string{"a"}, YLabels: []string{"b"}, Counts: [][]int{{0}}}).HasChart)
+}
+
+// RampClass names the base class and its step, and a step outside the
+// ramp takes its nearest end.
+func TestRampClass(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	is.Eq(RampClass(1), "chart-ramp chart-ramp--1")
+	is.Eq(RampClass(8), "chart-ramp chart-ramp--8")
+	is.Eq(RampClass(0), "chart-ramp chart-ramp--1")
+	is.Eq(RampClass(12), "chart-ramp chart-ramp--8")
 }

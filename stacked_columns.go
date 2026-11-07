@@ -1,6 +1,10 @@
 package chart
 
-import "github.com/croaky/hml"
+import (
+	"slices"
+
+	"github.com/croaky/hml"
+)
 
 // StackedColumn is one period's numbers: its label, one count for each
 // series in the order the series were named, and the names behind them
@@ -30,12 +34,16 @@ type StackedColumn struct {
 
 // StackedSegment is one series' share of one column. Style sets
 // --chart-pct, as [Bar.Style] does.
+//
+// LinkAttrs holds the attributes of [StackedColumns.WithLinkAttr], and
+// is nil for a segment with no URL.
 type StackedSegment struct {
-	Series string      `json:"series"`
-	Class  string      `json:"class"`
-	Count  int         `json:"count"`
-	Style  hml.SafeCSS `json:"style"`
-	URL    string      `json:"url"`
+	Series    string         `json:"series"`
+	Class     string         `json:"class"`
+	Count     int            `json:"count"`
+	Style     hml.SafeCSS    `json:"style"`
+	URL       string         `json:"url"`
+	LinkAttrs map[string]any `json:"link_attrs"`
 }
 
 // StackedCol is one column: its label, its total, a segment for each
@@ -191,6 +199,22 @@ func NewStackedColumns(series, classes []string, cols []StackedColumn) StackedCo
 		sc.Class = "chart-bars--long"
 	}
 	return sc
+}
+
+// WithLinkAttr returns the chart with one more attribute on the link of
+// each segment that has a URL, as [GroupedBars.WithLinkAttr] does. The
+// chart it is called on stays as it was.
+func (s StackedColumns) WithLinkAttr(name string) StackedColumns {
+	cols := slices.Clone(s.Cols)
+	for i := range cols {
+		segs := slices.Clone(cols[i].Segments)
+		for j := range segs {
+			segs[j].LinkAttrs = withLinkAttr(segs[j].LinkAttrs, name, segs[j].URL)
+		}
+		cols[i].Segments = segs
+	}
+	s.Cols = cols
+	return s
 }
 
 // selectedClass is the class a column wears: the selected one, or none.

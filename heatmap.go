@@ -113,12 +113,22 @@ func NewHeatmap(args HeatmapArgs, opts ...Option) Heatmap {
 }
 
 // rampClass is the class of a count's step on the ramp, or empty for a
-// count at or below zero. Each class is written out, so a search for
-// the selector finds the code that sets it.
+// count at or below zero.
 func rampClass(count, maxCount int) string {
 	if count <= 0 || maxCount <= 0 {
 		return ""
 	}
+	return RampClass(int(math.Ceil(float64(count) / float64(maxCount) * rampSteps)))
+}
+
+// RampClass is the class that colors step 1 to 8 of the ordered ramp,
+// as [SeriesClass] is for the categorical palette. A step outside the
+// ramp takes its nearest end. It names the base class too, because the
+// base class is the one that spends the color.
+//
+// Each class is written out, so a search for the selector finds the
+// code that sets it.
+func RampClass(step int) string {
 	classes := [rampSteps]string{
 		"chart-ramp chart-ramp--1",
 		"chart-ramp chart-ramp--2",
@@ -129,6 +139,5 @@ func rampClass(count, maxCount int) string {
 		"chart-ramp chart-ramp--7",
 		"chart-ramp chart-ramp--8",
 	}
-	step := int(math.Ceil(float64(count) / float64(maxCount) * rampSteps))
 	return classes[min(max(step, 1), rampSteps)-1]
 }

@@ -116,9 +116,49 @@ func TestLinesView(t *testing.T) {
 		`chart-lines-label`,
 		`chart-event`,
 		`deploy`,
-		`chart-legend-swatch`,
 		`Jan 8`,
 	)
+	// The end labels name each line, so the legend would name each one
+	// twice.
+	if strings.Contains(out, "chart-legend") {
+		t.Errorf("output has a legend beside the end labels\n%s", out)
+	}
+}
+
+// A series color reaches the line, its end dot, its end label, and its
+// legend swatch. A series with no color writes no style attribute on
+// its line.
+func TestLinesViewSeriesColor(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	series := []Series{
+		{Label: "PHI", Class: "chart-series", Color: "#004c54", Points: []Point{pt(0, 40), pt(1, 60)}},
+		{Label: "NYG", Class: "chart-series", Points: []Point{pt(0, 60), pt(1, 40)}},
+	}
+	out := render(t, "chart/lines", map[string]any{"data": NewLines(Percent, series, WithDomain(0, 100), WithEndLabels())})
+	is.Eq(strings.Count(out, `style="--chart-mark: #004c54"`), 2)
+	mustContain(t, out, `style="--chart-at: 60.00%; --chart-mark: #004c54"`)
+	is.Eq(strings.Count(out, `<polyline class="chart-lines-line chart-series" points=`), 2)
+
+	out = render(t, "chart/lines", map[string]any{"data": NewLines(Percent, series, WithDomain(0, 100))})
+	mustContain(t, out, `<span class="chart-legend-swatch chart-series" style="--chart-mark: #004c54">`)
+}
+
+// WithLinkAttr adds the attribute to each link and to nothing else.
+func TestLinkAttrView(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	s := NewStackedColumns([]string{"Met", "Won"}, nil, []StackedColumn{
+		{Label: "Q1", Counts: []int{2, 1}, URLs: []string{"/q1"}},
+	}).WithLinkAttr("ajax-get")
+	out := render(t, "chart/stacked_columns", map[string]any{"data": s})
+	mustContain(t, out, `ajax-get="/q1" aria-label="Met: 2"`)
+	is.Eq(strings.Count(out, "ajax-get"), 1)
+
+	g := NewGroupedBars([]string{"Met"}, []GroupedColumn{{Label: "Q1", Counts: []int{3}, URLs: []string{"/q1"}}}).WithLinkAttr("ajax-get")
+	mustContain(t, render(t, "chart/grouped_bars", map[string]any{"data": g}), `ajax-get="/q1"`)
 }
 
 // A signed axis draws its zero rule.

@@ -3,9 +3,9 @@ package chart
 import "time"
 
 // Option configures a builder over time: [NewLines], [NewSparkline],
-// [NewEventMarks], and [NewHeatmap].
+// [NewEventMarks], [NewHeatmap], and [TimeTicks].
 //
-// One option type serves all four. So WithBounds and WithLocation mean
+// One option type serves them all. So WithBounds and WithLocation mean
 // the same thing on each, and a page passes one list to each chart. Each
 // builder's comment names the options it reads. A builder ignores the
 // others.
@@ -18,8 +18,20 @@ type options struct {
 	hasDomain bool
 	lo, hi    float64
 	loc       *time.Location
+	clock12   bool
 	endLabels bool
 	events    []Event
+}
+
+// clock is how a builder prints a time: in which zone, and on which
+// clock.
+type clock struct {
+	loc *time.Location
+	h12 bool
+}
+
+func (o options) clock() clock {
+	return clock{loc: orUTC(o.loc), h12: o.clock12}
 }
 
 func readOptions(opts []Option) options {
@@ -67,8 +79,16 @@ func WithLocation(loc *time.Location) Option {
 	return func(o *options) { o.loc = loc }
 }
 
+// WithClock12 prints the time labels and the tip titles on a 12-hour
+// clock, 3:04 PM, where a reader expects one. Without it they are on a
+// 24-hour clock, 15:04.
+func WithClock12() Option {
+	return func(o *options) { o.clock12 = true }
+}
+
 // WithEndLabels labels the end of each line with its series and its
-// last value. See [EndLabel].
+// last value, and leaves out the legend, because each line then has
+// its name at its end. See [EndLabel].
 func WithEndLabels() Option {
 	return func(o *options) { o.endLabels = true }
 }

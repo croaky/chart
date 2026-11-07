@@ -47,9 +47,13 @@ func SeriesClass(i int) string {
 // The swatch wears the same class as its line or its bar, so a key
 // cannot drift from its series. A legend goes below the plot, not
 // beside it, so a narrow screen does not squeeze the plot to make room.
+//
+// Attrs holds the style of a [Series.Color], and is nil for a key with
+// none.
 type LegendKey struct {
-	Class string `json:"class"`
-	Label string `json:"label"`
+	Class string         `json:"class"`
+	Label string         `json:"label"`
+	Attrs map[string]any `json:"attrs"`
 }
 
 // SeriesLegend names each series in the order given, in its

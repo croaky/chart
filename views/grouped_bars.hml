@@ -16,7 +16,7 @@
             - for bar in col.bars
               .chart-bars-track
                 - if bar.url != ""
-                  %a.chart-bars-bar{ class: bar.class, style: bar.style, href: bar.url, "aria-label": "#{bar.series}: #{bar.value}" }
+                  %a.chart-bars-bar{ class: bar.class, style: bar.style, href: bar.url, "aria-label": "#{bar.series}: #{bar.value}", **bar.link_attrs }
                 - else
                   .chart-bars-bar{ class: bar.class, style: bar.style }
                 %span.chart-bars-count

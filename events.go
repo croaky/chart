@@ -38,8 +38,8 @@ const eventClusterGap = 1.2
 
 // NewEventMarks places the events on a time axis and clusters each run
 // of events closer than eventClusterGap. It reads the options
-// WithBounds and WithLocation. A zero bound leaves that end to the
-// events, and an event outside the bounds draws no mark.
+// WithBounds, WithLocation, and WithClock12. A zero bound leaves that
+// end to the events, and an event outside the bounds draws no mark.
 //
 // Use it for a chart that has no time axis of its own, such as
 // [StackedColumns]. A line chart takes its events with [WithEvents],
@@ -50,7 +50,7 @@ const eventClusterGap = 1.2
 // rest.
 func NewEventMarks(events []Event, opts ...Option) EventMarks {
 	o := readOptions(opts)
-	return eventMarks(events, o.from, o.to, o.loc)
+	return eventMarks(events, o.from, o.to, o.clock())
 }
 
 // eventMarks places the events on the axis from from to to. A zero end
@@ -59,7 +59,7 @@ func NewEventMarks(events []Event, opts ...Option) EventMarks {
 // An event outside the axis draws no mark. On the edge, a mark would
 // name a time the event did not happen at. A list of events longer
 // than the plot would also stack there as one false cluster.
-func eventMarks(events []Event, from, to time.Time, loc *time.Location) EventMarks {
+func eventMarks(events []Event, from, to time.Time, c clock) EventMarks {
 	if len(events) == 0 {
 		return EventMarks{}
 	}
@@ -103,26 +103,25 @@ func eventMarks(events []Event, from, to time.Time, loc *time.Location) EventMar
 		return EventMarks{}
 	}
 
-	loc = orUTC(loc)
 	marks := make([]EventMark, 0, len(clusters))
-	for _, c := range clusters {
-		pos := c.sumX / float64(len(c.events)) / 100
-		title := pointLabel(c.events[0].At, 0, loc)
-		if len(c.events) > 1 {
-			title = strconv.Itoa(len(c.events)) + " events"
+	for _, cl := range clusters {
+		pos := cl.sumX / float64(len(cl.events)) / 100
+		title := c.point(cl.events[0].At, 0)
+		if len(cl.events) > 1 {
+			title = strconv.Itoa(len(cl.events)) + " events"
 		}
 		tip := NewTipAt(title, pos)
-		for _, e := range c.events[:min(len(c.events), TipNameLimit)] {
-			tip = tip.Line(e.At.In(loc).Format("15:04"), e.Label)
+		for _, e := range cl.events[:min(len(cl.events), TipNameLimit)] {
+			tip = tip.Line(c.time(e.At), e.Label)
 		}
-		if rest := len(c.events) - TipNameLimit; rest > 0 {
+		if rest := len(cl.events) - TipNameLimit; rest > 0 {
 			tip = tip.SubLine("", "+"+strconv.Itoa(rest)+" more")
 		}
 		marks = append(marks, EventMark{
-			Count:  len(c.events),
+			Count:  len(cl.events),
 			Style:  atStyle(pos),
 			Tip:    tip,
-			Events: c.events,
+			Events: cl.events,
 		})
 	}
 	return EventMarks{HasMarks: true, Marks: marks}

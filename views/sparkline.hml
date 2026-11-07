@@ -1,6 +1,7 @@
 -# A sparkline: a chart.Sparkline. It writes no style attribute, so it
 -# renders under a Content-Security-Policy of style-src 'self'. The
--# labels sit in plain order around the SVG, and CSS places them.
+-# labels sit in plain order around the SVG, and CSS places them. A
+-# series color is the one style attribute, and only when set.
 - if data.has_chart
   .chart-sparkline
     .chart-sparkline-axis
@@ -12,7 +13,7 @@
       - if data.has_zero
         %line.chart-plot-zero{ x1: "0%", x2: "100%", y1: data.zero_y, y2: data.zero_y }
       - for shape in data.shapes
-        %polyline.chart-lines-line{ class: shape.class, points: shape.points }
+        %polyline.chart-lines-line{ class: shape.class, points: shape.points, **shape.attrs }
     .chart-sparkline-dates
       %span
         = data.start
