@@ -55,5 +55,7 @@
 //
 // [Sparkline] writes no style attribute. Its geometry is SVG attributes,
 // and its labels sit in plain order around the SVG. It renders under
-// style-src 'self' with no exception.
+// style-src 'self' with no exception, unless a series sets
+// [Series.Color], which writes the one style attribute. Under that
+// policy, a series takes its color from its class.
 package chart

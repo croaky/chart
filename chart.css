@@ -303,6 +303,29 @@
     }
   }
 
+  /* A tip host holds its tip. Its position: relative is the default,
+     and a host that a chart places, such as a band, a dot, or an event
+     mark, sets position: absolute in a later rule. The later rule wins
+     at the same specificity, so this rule stays above each of them. */
+  .chart-tip-host {
+    position: relative;
+
+    &:is(:hover, :focus-visible, :focus-within) {
+      z-index: var(--z-index--component, 10);
+
+      > .chart-tip,
+      > .chart-col-line {
+        opacity: 1;
+        visibility: visible;
+      }
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color--accent, Highlight);
+      outline-offset: -2px;
+    }
+  }
+
   /* Hover bands: one for each date, placed by Go. */
   .chart-cols {
     inset: 0;
@@ -332,25 +355,6 @@
   /* The tip. visibility and not display, so the panel can fade, and so
      it leaves the accessibility tree while hidden. The delay keeps a
      pointer that crosses two columns from flashing a panel at each. */
-  .chart-tip-host {
-    position: relative;
-
-    &:is(:hover, :focus-visible, :focus-within) {
-      z-index: var(--z-index--component, 10);
-
-      > .chart-tip,
-      > .chart-col-line {
-        opacity: 1;
-        visibility: visible;
-      }
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color--accent, Highlight);
-      outline-offset: -2px;
-    }
-  }
-
   .chart-tip {
     background-color: var(--color--bg-secondary, Canvas);
     border: 1px solid var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent));

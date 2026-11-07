@@ -383,6 +383,30 @@ func TestCSSSitsInTheComponentsLayer(t *testing.T) {
 	is.Eq(strings.Count(css, "{"), strings.Count(css, "}"))
 }
 
+// A host that a chart places sets position: absolute after the tip host
+// rule sets position: relative. Both have one class and sit in one
+// layer, so the later rule wins. With the order the other way, a hover
+// band sits in the flow with no height and opens no tip.
+func TestCSSPlacesEachTipHostAfterTheHostRule(t *testing.T) {
+	t.Parallel()
+
+	css := cssComment.ReplaceAllString(CSS, "")
+	host := strings.Index(css, "\n  .chart-tip-host {")
+	if host < 0 {
+		t.Fatal("chart.css has no top-level .chart-tip-host rule")
+	}
+	for _, placed := range []string{".chart-col", ".chart-scatter-dot", ".chart-event"} {
+		at := strings.Index(css, "\n  "+placed+" {")
+		if at < 0 {
+			t.Errorf("chart.css has no top-level %s rule", placed)
+			continue
+		}
+		if at < host {
+			t.Errorf("%s comes before .chart-tip-host, so the host rule undoes its position: absolute", placed)
+		}
+	}
+}
+
 // A breakpoint is a strict range, width < 70em. max-width: 70em also
 // matches at 70em, where a min-width: 70em rule applies, so a screen
 // that wide would get both layouts.
