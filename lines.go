@@ -129,11 +129,11 @@ type LineColumn struct {
 }
 
 // EndLabel names one line at its right end: the series, its last
-// value, and its color. Style sets --chart-at, the label's distance up
-// the plot as a percentage.
+// value, and its color. Style sets --chart-top, the distance of the
+// label's center down from the top of the plot.
 //
 // A label sits at the height of its line's last point. Two labels
-// closer than endLabelGap move apart, and the larger value stays on
+// closer than one label line move apart, and the larger value stays on
 // top. Without that, two lines that end near each other print two
 // labels on top of each other.
 type EndLabel struct {
@@ -142,11 +142,6 @@ type EndLabel struct {
 	Class string      `json:"class"`
 	Style hml.SafeCSS `json:"style"`
 }
-
-// endLabelGap is the least distance between two end label centers, as a
-// percentage of the plot's height. A label is one line of small text,
-// about a tenth of a plot's height.
-const endLabelGap = 10.0
 
 // NewLines draws the series and prints each number in f. It reads the
 // options WithLog, WithDomain, WithBounds, WithBuckets, WithLocation,
@@ -384,12 +379,23 @@ func minGap(dates []time.Time) time.Duration {
 }
 
 // endLabels places a label at the end of each line and moves labels
-// apart that sit closer than endLabelGap.
+// apart that sit closer than one label line.
 //
-// It sorts the labels from the top of the plot down, then walks down
-// and pushes each label below the one above it. A label pushed past the
-// bottom pushes the labels above it back up. The larger value sorts
-// first, so it stays on top when two lines end at the same height.
+// The gap is a line of the label's text, 1lh, and not a share of the
+// plot. Go knows each label's place as a share of the plot but not the
+// plot's height in lines, so the browser does the last step. Each label
+// gets one CSS expression.
+//
+// The labels sort from the top of the plot down, and the larger value
+// sorts first, so it stays on top when two lines end at one height.
+// Then a walk down pushes each label at least one line below the one
+// above it, and starts half a line inside the top. Label i lands at the
+// largest of i+0.5 lines, and of each label k at or above it moved down
+// i-k lines. A walk back up then holds each label above the bottom,
+// with room for the labels under it: n-i-0.5 lines inside the bottom
+// edge. The walk down leaves each label a line or more below the one
+// above it, so in the walk up only the bottom edge can move a label.
+// One min of one max is then the result of both walks.
 func (p plot) endLabels(f Format) []EndLabel {
 	type label struct {
 		end   EndLabel
@@ -411,24 +417,18 @@ func (p plot) endLabels(f Format) []EndLabel {
 		return cmp.Or(cmp.Compare(a.top, b.top), cmp.Compare(b.value, a.value))
 	})
 
-	edge := endLabelGap / 2
-	for i := range labels {
-		labels[i].top = max(labels[i].top, edge)
-		if i > 0 {
-			labels[i].top = max(labels[i].top, labels[i-1].top+endLabelGap)
-		}
-	}
-	for i := range slices.Backward(labels) {
-		limit := 100 - edge
-		if i < len(labels)-1 {
-			limit = labels[i+1].top - endLabelGap
-		}
-		labels[i].top = min(labels[i].top, limit)
-	}
-
 	out := make([]EndLabel, 0, len(labels))
-	for _, l := range labels {
-		l.end.Style = atStyle(1 - l.top/100)
+	for i, l := range labels {
+		lowest := []string{fmt.Sprintf("calc(%g * 1lh)", float64(i)+0.5)}
+		for k := range i + 1 {
+			top := fmt.Sprintf("%.2f%%", labels[k].top)
+			if k < i {
+				top = fmt.Sprintf("calc(%s + %d * 1lh)", top, i-k)
+			}
+			lowest = append(lowest, top)
+		}
+		l.end.Style = hml.SafeCSS(fmt.Sprintf("--chart-top: min(max(%s), calc(100%% - %g * 1lh))",
+			strings.Join(lowest, ", "), float64(len(labels)-i)-0.5))
 		if l.color != "" {
 			l.end.Style += hml.SafeCSS("; --chart-mark: " + l.color)
 		}

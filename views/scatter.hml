@@ -15,6 +15,10 @@
           .chart-rule.chart-rule--across{ style: tick.style }
         - for tick in data.x_ticks
           .chart-rule.chart-rule--down{ style: tick.style }
+        -# Over the grid and under the dots. One box draws the shade and
+        -# both dividers, so the dividers cannot leave the shade's edges.
+        - if data.has_quadrants
+          .chart-scatter-quadrants
         - for dot in data.dots
           .chart-scatter-dot.chart-tip-host{ style: dot.style, tabindex: "0" }
             = render "chart/tip", data: dot.tip

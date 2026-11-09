@@ -98,7 +98,9 @@ type StackedColumns struct {
 	// under its column.
 	Labeled bool `json:"labeled"`
 	// Class is "chart-bars--long" on a long run, which keeps its
-	// columns at every width, and empty on a labeled run.
+	// columns at every width. It is "chart-bars--columns" on a labeled
+	// run after [StackedColumns.KeepColumns], and empty on another
+	// labeled run.
 	Class string `json:"class"`
 	// Events are marks a caller sets from [NewEventMarks]. The columns
 	// have no time axis, so the caller passes WithBounds that span the
@@ -214,6 +216,21 @@ func (s StackedColumns) WithLinkAttr(name string) StackedColumns {
 		cols[i].Segments = segs
 	}
 	s.Cols = cols
+	return s
+}
+
+// KeepColumns returns the chart with its columns at every width. A
+// labeled run otherwise turns into rows on a narrow screen.
+//
+// Use it for a run of periods that sits under a time axis, such as a
+// line chart over the same hours. Rows would turn time from across to
+// down, and the reader could not match a column to the line above it.
+// A long run keeps its columns already, so it stays as it was. The
+// chart it is called on stays as it was too.
+func (s StackedColumns) KeepColumns() StackedColumns {
+	if s.Labeled {
+		s.Class = "chart-bars--columns"
+	}
 	return s
 }
 

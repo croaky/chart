@@ -167,6 +167,23 @@ func TestStackedColumnsLongRun(t *testing.T) {
 	is.Eq(s.Dates, []string{"W1", "W7", "W13"})
 	is.True(s.HasDates)
 	is.Eq(s.Class, "chart-bars--long")
+	// A long run keeps its columns already.
+	is.Eq(s.KeepColumns().Class, "chart-bars--long")
+}
+
+// KeepColumns keeps a labeled run in columns at every width, for a run
+// of periods under a time axis. It leaves the chart it is called on as
+// it was.
+func TestStackedColumnsKeepColumns(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	s := NewStackedColumns([]string{"Met"}, nil, []StackedColumn{{Label: "Q1", Counts: []int{1}}})
+	kept := s.KeepColumns()
+
+	is.Eq(kept.Class, "chart-bars--columns")
+	is.True(kept.Labeled)
+	is.Eq(s.Class, "")
 }
 
 func TestStackedColumnsWithNothingToPlot(t *testing.T) {

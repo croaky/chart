@@ -4,7 +4,8 @@
 -# a narrow screen, like a bar chart. A long run prints no column label:
 -# the dates below name the ends of the range and its middle, and it
 -# keeps its columns at every width. Each column names its own period in
--# its tip. A segment with a URL is a link to the rows behind it.
+-# its tip. A short run after KeepColumns keeps its columns too. A
+-# segment with a URL is a link to the rows behind it.
 - if data.has_chart
   .chart-bars.chart-bars--stacked{ class: data.class }
     .chart-axis-y.chart-axis-y--even

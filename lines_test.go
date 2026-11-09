@@ -232,8 +232,8 @@ func TestLinesSeriesColor(t *testing.T) {
 
 	is.Eq(l.Shapes[0].Attrs, map[string]any{"style": hml.SafeCSS("--chart-mark: #0af")})
 	is.Nil(l.Shapes[1].Attrs)
-	is.Eq(string(l.EndLabels[0].Style), "--chart-at: 50.00%; --chart-mark: #0af")
-	is.Eq(string(l.EndLabels[1].Style), "--chart-at: 10.00%")
+	is.Eq(string(l.EndLabels[0].Style), "--chart-top: min(max(calc(0.5 * 1lh), 50.00%), calc(100% - 1.5 * 1lh)); --chart-mark: #0af")
+	is.Eq(string(l.EndLabels[1].Style), "--chart-top: min(max(calc(1.5 * 1lh), calc(50.00% + 1 * 1lh), 90.00%), calc(100% - 0.5 * 1lh))")
 	is.Eq(l.Legend[0].Attrs, map[string]any{"style": hml.SafeCSS("--chart-mark: #0af")})
 	is.Nil(l.Legend[1].Attrs)
 	// The end labels name each line, so the view draws no legend.
@@ -261,34 +261,33 @@ func endAt(label string, v float64) Series {
 	return Series{Label: label, Class: label, Points: []Point{pt(0, 0), pt(1, v)}}
 }
 
-// Two labels that would overlap move apart, and the larger value stays
-// on top.
+// Labels sort from the top of the plot down, and the larger value stays
+// on top when two lines end at one height. Each label sits at least one
+// label line below the one above it: the label in row i is the largest
+// of each label k above it, moved down i-k lines.
 func TestLinesEndLabelsMoveApart(t *testing.T) {
 	t.Parallel()
 	is := is.New(t)
 
-	l := NewLines(Percent, []Series{endAt("a", 50), endAt("b", 52)}, WithDomain(0, 100), WithEndLabels())
+	l := NewLines(Percent, []Series{endAt("a", 50), endAt("b", 52), endAt("c", 52)}, WithDomain(0, 100), WithEndLabels())
 
 	is.True(l.HasEndLabels)
 	is.Eq(l.EndLabels, []EndLabel{
-		{Label: "b", Value: "52%", Class: "b", Style: "--chart-at: 52.00%"},
-		{Label: "a", Value: "50%", Class: "a", Style: "--chart-at: 42.00%"},
+		{Label: "b", Value: "52%", Class: "b", Style: "--chart-top: min(max(calc(0.5 * 1lh), 48.00%), calc(100% - 2.5 * 1lh))"},
+		{Label: "c", Value: "52%", Class: "c", Style: "--chart-top: min(max(calc(1.5 * 1lh), calc(48.00% + 1 * 1lh), 48.00%), calc(100% - 1.5 * 1lh))"},
+		{Label: "a", Value: "50%", Class: "a", Style: "--chart-top: min(max(calc(2.5 * 1lh), calc(48.00% + 2 * 1lh), calc(48.00% + 1 * 1lh), 50.00%), calc(100% - 0.5 * 1lh))"},
 	})
 }
 
-// A label stays inside the plot, and labels pushed past the bottom push
-// the ones above them back up.
+// The gap is one line of the label's own text, not a share of the plot,
+// so a short plot does not print two labels over each other. Each
+// label stays half a line inside the top and the bottom of the plot.
 func TestLinesEndLabelsStayInThePlot(t *testing.T) {
 	t.Parallel()
-	is := is.NewRelaxed(t)
+	is := is.New(t)
 
 	l := NewLines(Percent, []Series{endAt("top", 100)}, WithDomain(0, 100), WithEndLabels())
-	is.Eq(string(l.EndLabels[0].Style), "--chart-at: 95.00%")
-
-	l = NewLines(Percent, []Series{endAt("a", 0), endAt("b", 0), endAt("c", 0)}, WithDomain(0, 100), WithEndLabels())
-	is.Eq(string(l.EndLabels[0].Style), "--chart-at: 25.00%")
-	is.Eq(string(l.EndLabels[1].Style), "--chart-at: 15.00%")
-	is.Eq(string(l.EndLabels[2].Style), "--chart-at: 5.00%")
+	is.Eq(string(l.EndLabels[0].Style), "--chart-top: min(max(calc(0.5 * 1lh), 0.00%), calc(100% - 0.5 * 1lh))")
 }
 
 // A sparkline names the ends of both axes and needs no hover.

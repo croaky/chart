@@ -2,10 +2,10 @@
   The stylesheet for the views of github.com/croaky/chart.
 
   Go computes each position. This sheet reads it from a custom property
-  that a view sets inline: --chart-at, --chart-left, --chart-width,
-  --chart-pct, --chart-x, and --chart-y. A media query then decides how
-  to spend the number, as a height on a wide screen or as a width on a
-  narrow one.
+  that a view sets inline: --chart-at, --chart-top, --chart-left,
+  --chart-width, --chart-pct, --chart-x, and --chart-y. A media query
+  then decides how to spend the number, as a height on a wide screen or
+  as a width on a narrow one.
 
   Each rule spends a token from the app's own scale, with a fallback,
   so a chart is the same size and color as the page around it. The
@@ -19,7 +19,7 @@
     --color--ramp-1 to --color--ramp-8         the heatmap ramp
     --font-size--small                         axis, legend, and tip text
     --font-weight--normal, --font-weight--bold
-    --line-height--tight
+    --line-height--tight                       a tip, and an end label
     --spacing--x-small, --spacing--small
     --border-radius--base, --box-shadow--base
     --z-index--component                       an open tip's host
@@ -28,6 +28,7 @@
     --chart-y-axis-width                       the y axis
     --chart-x-label-height                     a label under a column
     --chart-bar-share                          a bar's share of its column
+    --chart-quadrant-shade                     the top right scatter quadrant
 
   A size that is not a step of spacing keeps a literal: a 1px rule, a
   dot, a swatch, and the width of a row label.
@@ -281,17 +282,18 @@
   }
 
   /* After .chart-series: an end label wears the series color as text,
-     not as a background. */
+     not as a background. --chart-top keeps two labels one line apart in
+     units of 1lh, so the line height here is the gap between them. */
   .chart-lines-label {
     background-color: transparent;
-    bottom: var(--chart-at);
     color: var(--chart-mark);
     display: flex;
     gap: var(--spacing--x-small, 0.25rem);
     left: 0;
-    line-height: 1;
+    line-height: var(--line-height--tight, 1.2);
     position: absolute;
-    transform: translateY(50%);
+    top: var(--chart-top);
+    transform: translateY(-50%);
     white-space: nowrap;
 
     .chart-lines-label-name {
@@ -561,11 +563,11 @@
   }
 
   /* Rows below 70em. A strict width < query, so a screen exactly 70em
-     wide gets one layout and not both. The query limits itself to a
-     labeled run, so a long run keeps its columns and no rule has to
-     undo this one. */
+     wide gets one layout and not both. The query leaves out a long run
+     and a run with .chart-bars--columns, so each keeps its columns and
+     no rule has to undo this one. */
   @media (width < 70em) {
-    .chart-bars:not(.chart-bars--long) {
+    .chart-bars:not(.chart-bars--long, .chart-bars--columns) {
       display: block;
 
       .chart-axis-y--even {
@@ -651,6 +653,24 @@
     &:is(:hover, :focus-visible) {
       opacity: 1;
     }
+  }
+
+  /* One box for the four quadrants of a scatter, painted as three
+     background layers: the shaded quarter at the top right, then the
+     two dividers at the middle of each axis. The dividers are the edges
+     of the shade, so the plot needs no element for each quadrant. */
+  .chart-scatter-quadrants {
+    --chart-divider: var(--color--border-base, color-mix(in srgb, CanvasText 12%, transparent));
+    --chart-shade: var(--chart-quadrant-shade, color-mix(in srgb, var(--color--accent, Highlight) 12%, transparent));
+    background-image:
+      linear-gradient(var(--chart-shade), var(--chart-shade)),
+      linear-gradient(var(--chart-divider), var(--chart-divider)),
+      linear-gradient(var(--chart-divider), var(--chart-divider));
+    background-position: 100% 0, 50% 0, 0 50%;
+    background-repeat: no-repeat;
+    background-size: 50% 50%, 1px 100%, 100% 1px;
+    inset: 0;
+    position: absolute;
   }
 
   .chart-note {

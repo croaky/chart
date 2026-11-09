@@ -138,7 +138,7 @@ func TestLinesViewSeriesColor(t *testing.T) {
 	}
 	out := render(t, "chart/lines", map[string]any{"data": NewLines(Percent, series, WithDomain(0, 100), WithEndLabels())})
 	is.Eq(strings.Count(out, `style="--chart-mark: #004c54"`), 2)
-	mustContain(t, out, `style="--chart-at: 60.00%; --chart-mark: #004c54"`)
+	mustContain(t, out, `style="--chart-top: min(max(calc(0.5 * 1lh), 40.00%), calc(100% - 1.5 * 1lh)); --chart-mark: #004c54"`)
 	is.Eq(strings.Count(out, `<polyline class="chart-lines-line chart-series" points=`), 2)
 
 	out = render(t, "chart/lines", map[string]any{"data": NewLines(Percent, series, WithDomain(0, 100))})
@@ -245,6 +245,9 @@ func TestStackedColumnsView(t *testing.T) {
 	long.Events = NewEventMarks([]Event{{At: day0, Label: "launch"}})
 	out = render(t, "chart/stacked_columns", map[string]any{"data": long})
 	mustContain(t, out, `chart-bars--long`, `chart-axis-dates--bars`, `W13`, `launch`)
+
+	out = render(t, "chart/stacked_columns", map[string]any{"data": s.KeepColumns()})
+	mustContain(t, out, `chart-bars--columns`, `chart-axis-x`)
 }
 
 func TestScatterView(t *testing.T) {
@@ -254,6 +257,17 @@ func TestScatterView(t *testing.T) {
 	out := render(t, "chart/scatter", map[string]any{"data": s})
 
 	mustContain(t, out, `chart-rule--down`, `chart-axis-x-tick`, `style="--chart-x: 0.00%; --chart-y: 100.00%"`, `1 point not plotted`)
+	if strings.Contains(out, "chart-scatter-quadrants") {
+		t.Errorf("output has quadrants that nobody asked for\n%s", out)
+	}
+
+	s = NewXYScatter(XYScatterArgs{Quadrants: true, Points: []XYPoint{{Label: "A", X: 10, Y: 100}}})
+	out = render(t, "chart/scatter", map[string]any{"data": s})
+	// The quadrants sit over the grid and under the dots.
+	quad, dot := strings.Index(out, "chart-scatter-quadrants"), strings.Index(out, "chart-scatter-dot")
+	if quad < 0 || quad > dot || strings.Index(out, "chart-rule--down") > quad {
+		t.Errorf("want the quadrants after the grid rules and before the dots\n%s", out)
+	}
 }
 
 func TestHeatmapView(t *testing.T) {

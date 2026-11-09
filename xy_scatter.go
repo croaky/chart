@@ -22,6 +22,8 @@ type XYScatterArgs struct {
 	XFormat, YFormat Format
 	XLabel, YLabel   string
 	Points           []XYPoint
+	// Quadrants sets [Scatter.HasQuadrants].
+	Quadrants bool
 }
 
 // Scatter is a plot of points on two axes, one dot for each point.
@@ -46,6 +48,15 @@ type Scatter struct {
 	// stated reason.
 	Omitted    string `json:"omitted"`
 	HasOmitted bool   `json:"has_omitted"`
+	// HasQuadrants divides the plot into four quarters at the middle of
+	// each axis, and shades the top right one. That quarter holds the
+	// points above the middle on both measures, which is the corner a
+	// reader of such a plot looks for. A caller that builds its own
+	// Scatter sets it there.
+	//
+	// The middle is the middle of the plot, not of the data. On a log
+	// axis that is the geometric mean of the two ends.
+	HasQuadrants bool `json:"has_quadrants"`
 }
 
 // ScatterDot is one dot and its tip. Style sets --chart-x and
@@ -83,6 +94,7 @@ func NewXYScatter(args XYScatterArgs) Scatter {
 	x := NewLogAxis(xr, args.XFormat)
 	y := NewLogAxis(yr, args.YFormat)
 	s.HasChart = true
+	s.HasQuadrants = args.Quadrants
 	s.YTicks = PlacedTicks(y.Ticks)
 	s.XTicks = PlacedTicks(x.Ticks)
 	s.Dots = make([]ScatterDot, 0, len(drawn))
