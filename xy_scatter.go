@@ -69,14 +69,15 @@ type ScatterDot struct {
 // NewXYScatter places each point on two log axes, for two measures
 // that each span more than a decade.
 //
-// A log axis has no place for a value at or below zero. A point with
-// one is left out, and Omitted says how many.
+// A log axis has no place for a value at or below zero, or for a value
+// that no axis can place. A point with one is left out, and Omitted
+// says how many.
 func NewXYScatter(args XYScatterArgs) Scatter {
 	var s Scatter
 	drawn := make([]XYPoint, 0, len(args.Points))
 	var xr, yr Range
 	for _, p := range args.Points {
-		if !(finiteOr0(p.X) > 0 && finiteOr0(p.Y) > 0) {
+		if !(placeableOr0(p.X) > 0 && placeableOr0(p.Y) > 0) {
 			continue
 		}
 		drawn = append(drawn, p)

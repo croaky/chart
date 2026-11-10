@@ -37,11 +37,11 @@ type ValueAxis struct {
 
 // NewValueAxis scales the range from lo to hi and labels it in f.
 //
-// A NaN or an infinite end counts as zero. A range of zero width
-// returns the axis from 0 to 1, so a caller that draws anyway divides
-// by no zero.
+// An end that no axis can place counts as zero: see [placeable]. A
+// range of zero width returns the axis from 0 to 1, so a caller that
+// draws anyway divides by no zero.
 func NewValueAxis(lo, hi float64, f Format) ValueAxis {
-	lo, hi = finiteOr0(lo), finiteOr0(hi)
+	lo, hi = placeableOr0(lo), placeableOr0(hi)
 	if lo > hi {
 		lo, hi = hi, lo
 	}
@@ -65,7 +65,13 @@ func NewValueAxis(lo, hi float64, f Format) ValueAxis {
 		Min: math.Floor(lo/step) * step,
 		Max: math.Ceil(hi/step) * step,
 	}
-	n := int(math.Round((a.Max - a.Min) / step))
+	// The ends are placeable, so the count is a few. The limit keeps a
+	// float error in the arithmetic above from becoming a capacity.
+	gaps := math.Round((a.Max - a.Min) / step)
+	if !(gaps >= 0 && gaps <= maxGaps) {
+		gaps = 0
+	}
+	n := int(gaps)
 	a.Ticks = make([]AxisTick, 0, n+1)
 	for i := n; i >= 0; i-- {
 		v := a.Min + float64(i)*step
@@ -120,9 +126,39 @@ func niceStep(raw float64) float64 {
 	}
 }
 
-// finiteOr0 is v, or zero when v is NaN or infinite.
-func finiteOr0(v float64) float64 {
-	if math.IsNaN(v) || math.IsInf(v, 0) {
+// maxGaps is the most gaps a linear axis can have. The 1/2/5 step gives
+// eight at most, so the limit only stops a count that is not a count.
+const maxGaps = 64
+
+// maxMagnitude and minMagnitude are the ends of the magnitudes an axis
+// can place.
+//
+// The axes round an end out to 1, 2, or 5 times a power of ten, and
+// a log axis then steps through each decade. Above about 1e308 the
+// rounding overflows to infinity. Below about 1e-308 the power of ten
+// underflows to zero. An infinite end makes the tick count not a
+// number, and a zero end on a log axis makes its decade loop run
+// without end. The margin of eight decades keeps 10 times an end, and
+// the power of ten below it, finite and normal.
+//
+// A chart of user data can hold such a value. An underflowed ratio is
+// one. Data that spans more than 600 decades is not a chart a reader
+// can read, so the value is no value, as a NaN is.
+const (
+	maxMagnitude = 1e300
+	minMagnitude = 1e-300
+)
+
+// placeable says whether an axis can place v: zero, or a finite value
+// whose magnitude is from minMagnitude to maxMagnitude.
+func placeable(v float64) bool {
+	m := math.Abs(v)
+	return m == 0 || (m >= minMagnitude && m <= maxMagnitude)
+}
+
+// placeableOr0 is v, or zero when no axis can place v.
+func placeableOr0(v float64) float64 {
+	if !placeable(v) {
 		return 0
 	}
 	return v

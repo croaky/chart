@@ -101,6 +101,34 @@ func TestLinesSkipsValuesThatAreNotNumbers(t *testing.T) {
 	is.Eq(len(l.Columns), 2)
 }
 
+// A value too large or too small for the axis is a gap, as a NaN is.
+// It does not set the axis, on a linear axis or on a log axis.
+func TestLinesSkipsExtremeValues(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	l := NewLines(Count, []Series{
+		{Label: "a", Points: []Point{pt(0, 10), pt(1, math.MaxFloat64), pt(2, 20)}},
+		{Label: "b", Points: []Point{pt(1, -math.MaxFloat64)}},
+	})
+	is.Eq(len(l.Shapes), 1)
+	is.Eq(l.Shapes[0].Points, "0.0,150.0 1000.0,0.0")
+	is.Eq(len(l.Columns), 2)
+
+	l = NewLines(Count, []Series{{Label: "a", Points: []Point{pt(0, 20), pt(1, 1e-320), pt(2, 500)}}}, WithLog())
+	is.Eq(l.Shapes[0].Points, "0.0,300.0 1000.0,0.0")
+	is.Eq(len(l.YTicks), 5)
+
+	// A domain end with no place on the axis is no end.
+	series := []Series{{Label: "a", Points: []Point{pt(0, 20), pt(1, 500)}}}
+	l = NewLines(USD, series, WithLog(), WithDomain(math.SmallestNonzeroFloat64, math.MaxFloat64))
+	is.True(l.HasChart)
+	is.True(len(l.YTicks) <= 9)
+	l = NewLines(USD, series, WithDomain(-math.MaxFloat64, math.MaxFloat64))
+	is.True(l.HasChart)
+	is.True(len(l.YTicks) <= 9)
+}
+
 // A signed domain draws a zero rule where the axis crosses zero.
 func TestLinesSignedDomain(t *testing.T) {
 	t.Parallel()
@@ -319,4 +347,10 @@ func TestSparklineDegenerate(t *testing.T) {
 	is.Eq(s.Top, "6")
 	is.Eq(s.Bottom, "0")
 	is.True(!s.HasZero)
+
+	// A value too large for the axis is a gap, so one point is left.
+	s = NewSparkline(Count, []Series{{Label: "a", Points: []Point{pt(0, 5), pt(1, -math.MaxFloat64)}}})
+	is.Eq(s.Start, "Jan 5, 2026")
+	is.Eq(s.Top, "6")
+	is.Eq(s.Bottom, "0")
 }

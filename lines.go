@@ -147,9 +147,10 @@ type EndLabel struct {
 // options WithLog, WithDomain, WithBounds, WithBuckets, WithLocation,
 // WithClock12, WithEndLabels, and WithEvents.
 //
-// A point with a NaN or infinite value is a gap. A point outside
-// WithBounds does not draw. A series with no other point does not
-// draw.
+// A point with a value that no axis can place is a gap: a NaN, an
+// infinity, or a nonzero magnitude above 1e300 or below 1e-300. A
+// point outside WithBounds does not draw. A series with no other point
+// does not draw.
 //
 // No series with a point means no chart: [Lines.HasChart] stays false,
 // and the view renders nothing. A linear chart whose every value is
@@ -213,7 +214,7 @@ func newPlot(f Format, series []Series, o options) (plot, bool) {
 	for _, s := range series {
 		points := make([]Point, 0, len(s.Points))
 		for _, pt := range s.Points {
-			if math.IsNaN(pt.Value) || math.IsInf(pt.Value, 0) {
+			if !placeable(pt.Value) {
 				continue
 			}
 			if !inBounds(pt.At, o.from, o.to) {

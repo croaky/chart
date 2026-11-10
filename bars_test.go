@@ -1,6 +1,7 @@
 package chart
 
 import (
+	"math"
 	"testing"
 
 	"github.com/croaky/is"
@@ -60,6 +61,28 @@ func TestValueBars(t *testing.T) {
 	is.Eq(b.Bars[1].Tip.Lines[0].Value, "No result")
 }
 
+// A value too large or too small for the axis is no result, as a NaN
+// is. It does not set the axis.
+func TestValueBarsDropExtremeValues(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	b := NewValueBars(Price, "Price", []ValueBarRow{
+		{Label: "A", Class: "a", Value: 1.32},
+		{Label: "B", Class: "b", Value: math.MaxFloat64},
+		{Label: "C", Class: "c", Value: 3.96},
+		{Label: "D", Class: "d", Value: 1e-320},
+	})
+
+	is.Eq(b.Ticks, []string{"$4", "$3", "$2", "$1", "$0"})
+	for _, i := range []int{1, 3} {
+		is.Eq(b.Bars[i].Value, "–")
+		is.Eq(string(b.Bars[i].Style), "--chart-pct: 0.0%")
+		is.Eq(b.Bars[i].Tip.Lines[0].Value, "No result")
+	}
+	is.True(!NewValueBars(USD, "Cost", []ValueBarRow{{Label: "A", Value: 1e-320}}).HasChart)
+}
+
 func TestValueBarsWithNothingToPlot(t *testing.T) {
 	t.Parallel()
 	is := is.New(t)
@@ -115,6 +138,11 @@ func TestValueGroupedBars(t *testing.T) {
 	})
 	is.Eq(g.Cols[0].Tip.Lines[1].Value, "No result")
 	is.True(!NewValueGroupedBars(USD, series, nil).HasChart)
+
+	// A value too large for the axis is no result, as a NaN is.
+	g = NewValueGroupedBars(USD, series, []ValueGroupedColumn{{Label: "L", Values: []float64{10, math.MaxFloat64}}})
+	is.Eq(g.Ticks, []string{"$10", "$5", "$0"})
+	is.Eq(g.Cols[0].Bars[1], GroupedBar{Series: "B", Class: "y", Value: "–", Style: "--chart-pct: 0.0%"})
 }
 
 // A series keeps its class in each column, even in a column that lacks

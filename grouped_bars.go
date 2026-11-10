@@ -134,7 +134,7 @@ func NewValueGroupedBars(f Format, series []LegendKey, cols []ValueGroupedColumn
 	maxVal := 0.0
 	for _, c := range cols {
 		for _, v := range c.Values {
-			maxVal = max(maxVal, finiteOr0(v))
+			maxVal = max(maxVal, placeableOr0(v))
 		}
 	}
 	if len(cols) == 0 || maxVal <= 0 {
@@ -153,7 +153,7 @@ func NewValueGroupedBars(f Format, series []LegendKey, cols []ValueGroupedColumn
 				Series: s.Label,
 				Class:  s.Class,
 				Value:  shown,
-				Style:  pctStyle(axis.Up(max(finiteOr0(v), 0))),
+				Style:  pctStyle(axis.Up(max(placeableOr0(v), 0))),
 			})
 			tip = tip.Line(s.Label, value)
 		}

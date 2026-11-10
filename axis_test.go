@@ -153,6 +153,38 @@ func TestValueAxisWithNothingToPlot(t *testing.T) {
 	}
 }
 
+// formats is each Format, for a test that holds for all of them.
+var formats = []Format{Count, USD, Price, Percent, Signed, Millis}
+
+// A value too large or too small for the axis arithmetic is no value,
+// as a NaN is. For each pair of ends and each format the axis returns
+// finite ends and a few ticks. It does not panic.
+func TestValueAxisWithExtremeValues(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	big, tiny := math.MaxFloat64, math.SmallestNonzeroFloat64
+	ends := [][2]float64{
+		{0, big}, {-big, big}, {big, big}, {-big, 0},
+		{0, tiny}, {-tiny, tiny}, {0, 1e-320}, {tiny, big},
+		{-1e300, 1e300}, {0, 1e-300},
+	}
+	for _, f := range formats {
+		for _, e := range ends {
+			a := NewValueAxis(e[0], e[1], f)
+			is.True(!math.IsNaN(a.Min) && !math.IsInf(a.Min, 0))
+			is.True(!math.IsNaN(a.Max) && !math.IsInf(a.Max, 0))
+			is.True(a.Min < a.Max)
+			is.True(len(a.Ticks) >= 2 && len(a.Ticks) <= 9)
+		}
+	}
+
+	// An extreme end beside an ordinary one leaves the ordinary axis.
+	is.Eq(NewValueAxis(0, big, Count), NewValueAxis(0, 0, Count))
+	is.Eq(NewValueAxis(-big, 250, Count).Labels(), []string{"300", "200", "100", "0"})
+	is.Eq(NewValueAxis(1e-320, 0.5, Percent).Labels(), []string{"0.6%", "0.4%", "0.2%", "0%"})
+}
+
 // A value outside the axis sits on its edge, and a NaN sits at zero.
 func TestValueAxisUpClamps(t *testing.T) {
 	t.Parallel()
@@ -234,8 +266,40 @@ func TestRangeAddSkipsValuesWithNoPlace(t *testing.T) {
 	is := is.New(t)
 
 	var r Range
-	for _, v := range []float64{0, -3, math.NaN(), math.Inf(1), 40, 4, 400} {
+	for _, v := range []float64{
+		0, -3, math.NaN(), math.Inf(1), 40, 4, 400,
+		math.SmallestNonzeroFloat64, 1e-320, math.MaxFloat64,
+	} {
 		r.Add(v)
 	}
 	is.Eq(r, Range{Min: 4, Max: 400})
+}
+
+// A range end that the axis arithmetic cannot round, such as a range
+// that a caller builds for WithDomain, is no value. The axis returns
+// finite ends and a bounded tick list for each format.
+func TestLogAxisWithExtremeValues(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	big, tiny := math.MaxFloat64, math.SmallestNonzeroFloat64
+	ranges := []Range{
+		{Min: tiny, Max: 100}, {Min: 1e-320, Max: 100}, {Min: 10, Max: big},
+		{Min: tiny, Max: big}, {Min: 1e-300, Max: 1e300}, {Min: tiny, Max: tiny},
+	}
+	for _, f := range formats {
+		for _, r := range ranges {
+			a := NewLogAxis(r, f)
+			is.True(a.Min > 0 && !math.IsInf(a.Min, 0))
+			is.True(a.Max > a.Min && !math.IsInf(a.Max, 0))
+			is.True(len(a.Ticks) <= 309)
+		}
+	}
+
+	a := NewLogAxis(Range{Min: tiny, Max: 100}, Count)
+	is.Eq(a.Min, 100.0)
+	is.Eq(a.Max, 1_000.0)
+	a = NewLogAxis(Range{Min: 10, Max: big}, Count)
+	is.Eq(a.Min, 1.0)
+	is.Eq(a.Max, 10.0)
 }

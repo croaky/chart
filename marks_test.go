@@ -43,6 +43,28 @@ func TestXYScatter(t *testing.T) {
 	is.Eq(s.YTicks[len(s.YTicks)-1], PlacedTick{Label: "$100", Style: "--chart-at: 100.00%"})
 }
 
+// A value too large or too small for a log axis is no value on that
+// axis, so the point is left out and counted.
+func TestXYScatterOmitsExtremeValues(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	s := NewXYScatter(XYScatterArgs{
+		XFormat: Count, YFormat: USD,
+		Points: []XYPoint{
+			{Label: "A", X: 10, Y: 100},
+			{Label: "B", X: 1000, Y: 10},
+			{Label: "C", X: 1e-320, Y: 5},
+			{Label: "D", X: 10, Y: math.MaxFloat64},
+		},
+	})
+
+	is.Eq(s.Omitted, "2 points not plotted: no value on one axis.")
+	is.Eq(len(s.Dots), 2)
+	is.Eq(string(s.Dots[0].Style), "--chart-x: 0.00%; --chart-y: 100.00%")
+	is.Eq(string(s.Dots[1].Style), "--chart-x: 100.00%; --chart-y: 0.00%")
+}
+
 func TestXYScatterWithNothingToPlot(t *testing.T) {
 	t.Parallel()
 	is := is.New(t)

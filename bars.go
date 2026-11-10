@@ -105,13 +105,13 @@ type ValueBarRow struct {
 // a step of 500 and a top of 2,000 for no reason. The caller names each
 // bar's class, so one thing is one color in every chart on a page.
 //
-// A value at or below zero is no result. Its bar keeps its place and
-// draws empty, and its tip says so, because a thing missing from a
-// comparison is a fact the reader needs.
+// A value at or below zero, or a value that no axis can place, is no
+// result. Its bar keeps its place and draws empty, and its tip says so,
+// because a thing missing from a comparison is a fact the reader needs.
 func NewValueBars(f Format, valueLabel string, rows []ValueBarRow) Bars {
 	maxVal := 0.0
 	for _, r := range rows {
-		maxVal = max(maxVal, finiteOr0(r.Value))
+		maxVal = max(maxVal, placeableOr0(r.Value))
 	}
 	if maxVal <= 0 {
 		return Bars{}
@@ -127,7 +127,7 @@ func NewValueBars(f Format, valueLabel string, rows []ValueBarRow) Bars {
 			Label: r.Label,
 			Class: r.Class,
 			Value: shown,
-			Style: pctStyle(axis.Up(max(finiteOr0(r.Value), 0))),
+			Style: pctStyle(axis.Up(max(placeableOr0(r.Value), 0))),
 			Tip:   tip,
 		})
 	}
@@ -144,7 +144,7 @@ const (
 
 // resultText is the text of a value for its tip and for its bar.
 func resultText(v float64, f Format) (tip, bar string) {
-	if !(finiteOr0(v) > 0) {
+	if !(placeableOr0(v) > 0) {
 		return noResult, noResultMark
 	}
 	s := FormatValue(v, f)

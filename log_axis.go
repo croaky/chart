@@ -10,11 +10,11 @@ type Range struct {
 
 // Add widens the range to hold v.
 //
-// A value at or below zero, a NaN, and an infinity are no value: a log
-// scale has no place for them. A zero Min means that the range is still
+// A value at or below zero, and a value that no axis can place, is no
+// value: see [placeable]. A zero Min means that the range is still
 // empty, not that it reaches down to nothing.
 func (r *Range) Add(v float64) {
-	if v <= 0 || math.IsNaN(v) || math.IsInf(v, 0) {
+	if v <= 0 || !placeable(v) {
 		return
 	}
 	r.Max = max(r.Max, v)
@@ -48,6 +48,9 @@ type LogAxis struct {
 // log axis by eye, so it needs more of them than a linear axis.
 const logTickTarget = 5
 
+// maxExp is the largest decade exponent of a float64.
+const maxExp = 308
+
 // mantissas is the 1/2/5 ladder. A round value on a log axis is one of
 // these times a power of ten.
 var mantissas = []float64{1, 2, 5}
@@ -57,12 +60,16 @@ var mantissas = []float64{1, 2, 5}
 //
 // A range with nothing above zero, or with one value, still returns an
 // axis with two ends. A caller that draws anyway divides by no zero.
+//
+// It checks each end again, because a caller can build a Range without
+// Add, as WithDomain does. An end that no axis can place would round
+// to zero or to infinity.
 func NewLogAxis(r Range, f Format) LogAxis {
 	lo, hi := r.Min, r.Max
-	if hi <= 0 || math.IsNaN(hi) || math.IsInf(hi, 0) {
+	if hi <= 0 || !placeable(hi) {
 		hi = 1
 	}
-	if lo <= 0 || lo > hi || math.IsNaN(lo) {
+	if lo <= 0 || lo > hi || !placeable(lo) {
 		lo = hi
 	}
 
@@ -115,8 +122,11 @@ func (a LogAxis) tickLadder(f Format) []AxisTick {
 // smallest first.
 func (a LogAxis) ticksFor(keep []float64, f Format) []AxisTick {
 	var ticks []AxisTick
-	lowExp := int(math.Floor(math.Log10(a.Min)))
-	highExp := int(math.Ceil(math.Log10(a.Max)))
+	// The ends are placeable, so each exponent is within 301 of zero.
+	// The limit keeps the loop finite if an end is not, because a
+	// float to int conversion of an infinity has no fixed result.
+	lowExp := int(max(math.Floor(math.Log10(a.Min)), -maxExp))
+	highExp := int(min(math.Ceil(math.Log10(a.Max)), maxExp))
 
 	for e := lowExp; e <= highExp; e++ {
 		decade := math.Pow(10, float64(e))
