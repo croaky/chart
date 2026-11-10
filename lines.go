@@ -6,6 +6,7 @@ import (
 	"math"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -299,23 +300,40 @@ func (p plot) y(v float64) float64 {
 func (p plot) shapes() []LineShape {
 	shapes := make([]LineShape, 0, len(p.series))
 	for _, s := range p.series {
-		coords := make([]string, 0, len(s.Points)+1)
-		for _, pt := range s.Points {
-			x := p.xs[p.columnOf[pt.At.UnixNano()]]
-			coords = append(coords, fmt.Sprintf("%.1f,%.1f", x, p.y(pt.Value)))
+		// One buffer for each polyline, and not a string for each point:
+		// a chart of ten series of two years of weekly points has a
+		// thousand points. A point in the plot is at most 13 bytes:
+		// "1000.0,300.0 ".
+		buf := make([]byte, 0, 13*(len(s.Points)+1))
+		lastAt := 0
+		for i, pt := range s.Points {
+			if i > 0 {
+				buf = append(buf, ' ')
+			}
+			lastAt = len(buf)
+			buf = appendCoord(buf, p.xs[p.columnOf[pt.At.UnixNano()]], p.y(pt.Value))
 		}
-		last := coords[len(coords)-1]
-		if len(coords) == 1 {
-			coords = append(coords, last)
+		points := string(buf)
+		last := points[lastAt:]
+		if len(s.Points) == 1 {
+			points = last + " " + last
 		}
 		shapes = append(shapes, LineShape{
 			Class:  s.Class,
-			Points: strings.Join(coords, " "),
+			Points: points,
 			End:    last + " " + last,
 			Attrs:  markAttrs(s.Color),
 		})
 	}
 	return shapes
+}
+
+// appendCoord appends an SVG point, x and y to a tenth, as "%.1f,%.1f"
+// prints it.
+func appendCoord(buf []byte, x, y float64) []byte {
+	buf = strconv.AppendFloat(buf, x, 'f', 1, 64)
+	buf = append(buf, ',')
+	return strconv.AppendFloat(buf, y, 'f', 1, 64)
 }
 
 // zero reports whether the plot needs a zero rule, and its SVG y. A
@@ -353,6 +371,7 @@ func (p plot) columns(f Format, o options) []LineColumn {
 	cols := make([]LineColumn, 0, len(p.dates))
 	for i, d := range p.dates {
 		tip := NewTipAt(o.clock().point(d, gap), p.xs[i]/linesWidth)
+		tip.Lines = make([]TipLine, 0, len(p.series))
 		for j, s := range p.series {
 			if v, ok := at[j][d.UnixNano()]; ok {
 				tip = tip.Line(s.Label, FormatValue(v, f))

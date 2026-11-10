@@ -2,6 +2,7 @@ package chart
 
 import (
 	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -353,4 +354,46 @@ func TestSparklineDegenerate(t *testing.T) {
 	is.Eq(s.Start, "Jan 5, 2026")
 	is.Eq(s.Top, "6")
 	is.Eq(s.Bottom, "0")
+}
+
+// benchSeries is n series of two years of weekly points, the size of a
+// page that compares several things over time. Each series gets a hex
+// color, so the color check runs as it does on a page that sets one.
+func benchSeries(n int) []Series {
+	series := make([]Series, n)
+	for i := range series {
+		points := make([]Point, 104)
+		for w := range points {
+			points[w] = pt(7*w, float64(1000*(i+1)+37*w%500))
+		}
+		series[i] = Series{Label: "Series " + strconv.Itoa(i), Class: SeriesClass(i), Color: "#004c54", Points: points}
+	}
+	return series
+}
+
+func BenchmarkNewLines(b *testing.B) {
+	series := benchSeries(10)
+	for _, bc := range []struct {
+		name string
+		opts []Option
+	}{
+		{"linear", nil},
+		{"log", []Option{WithLog()}},
+		{"end_labels", []Option{WithEndLabels()}},
+	} {
+		b.Run(bc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				NewLines(Count, series, bc.opts...)
+			}
+		})
+	}
+}
+
+func BenchmarkNewSparkline(b *testing.B) {
+	series := benchSeries(1)
+	b.ReportAllocs()
+	for b.Loop() {
+		NewSparkline(Count, series)
+	}
 }

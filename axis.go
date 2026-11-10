@@ -1,7 +1,6 @@
 package chart
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/croaky/hml"
@@ -41,7 +40,15 @@ func PlacedTicks(ticks []AxisTick) []PlacedTick {
 
 // atStyle places an element at a fraction of the plot from 0 to 1.
 func atStyle(at float64) hml.SafeCSS {
-	return hml.SafeCSS(fmt.Sprintf("--chart-at: %.2f%%", 100*at))
+	buf := make([]byte, 0, 24)
+	return hml.SafeCSS(appendPct(append(buf, "--chart-at: "...), at))
+}
+
+// appendPct appends a fraction as a percentage to a hundredth, as
+// "%.2f%%" prints it. A style of each mark goes through it, so it
+// skips the format parser of fmt.
+func appendPct(buf []byte, frac float64) []byte {
+	return append(strconv.AppendFloat(buf, 100*frac, 'f', 2, 64), '%')
 }
 
 // scale is an axis that maps a value to a position: 0 at the bottom or

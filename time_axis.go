@@ -1,7 +1,6 @@
 package chart
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/croaky/hml"
@@ -208,5 +207,8 @@ func BucketColumns(xs []float64, width, bucket float64) []Column {
 // bandStyle places a band from left across width, both fractions of
 // the plot.
 func bandStyle(left, width float64) hml.SafeCSS {
-	return hml.SafeCSS(fmt.Sprintf("--chart-left: %.2f%%; --chart-width: %.2f%%", 100*left, 100*width))
+	buf := make([]byte, 0, 48)
+	buf = appendPct(append(buf, "--chart-left: "...), left)
+	buf = appendPct(append(buf, "; --chart-width: "...), width)
+	return hml.SafeCSS(buf)
 }

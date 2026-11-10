@@ -2,6 +2,7 @@ package chart
 
 import (
 	"math"
+	"strconv"
 	"testing"
 	"time"
 
@@ -255,4 +256,42 @@ func TestRampClass(t *testing.T) {
 	is.Eq(RampClass(8), "chart-ramp chart-ramp--8")
 	is.Eq(RampClass(0), "chart-ramp chart-ramp--1")
 	is.Eq(RampClass(12), "chart-ramp chart-ramp--8")
+}
+
+// BenchmarkNewXYScatter plots 500 points, one in fifty of them a value
+// that no axis can place, so the filter of the security fix runs.
+func BenchmarkNewXYScatter(b *testing.B) {
+	points := make([]XYPoint, 500)
+	for i := range points {
+		x, y := float64(i+1)*13, float64(i%97+1)*1.7
+		if i%50 == 0 {
+			x = 1e-320
+		}
+		points[i] = XYPoint{Label: "Point " + strconv.Itoa(i), X: x, Y: y}
+	}
+	args := XYScatterArgs{XFormat: Count, YFormat: USD, XLabel: "Stars", YLabel: "Revenue", Points: points}
+	b.ReportAllocs()
+	for b.Loop() {
+		NewXYScatter(args)
+	}
+}
+
+// BenchmarkNewHeatmap builds an hour of minutes by eight latency bands.
+func BenchmarkNewHeatmap(b *testing.B) {
+	args := HeatmapArgs{RowLabel: "Latency", CountLabel: "Requests"}
+	for i := range 60 {
+		args.XLabels = append(args.XLabels, "12:"+strconv.Itoa(i))
+		col := make([]int, 8)
+		for j := range col {
+			col[j] = (i*7 + j*13) % 200
+		}
+		args.Counts = append(args.Counts, col)
+	}
+	for j := range 8 {
+		args.YLabels = append(args.YLabels, strconv.Itoa(1<<j)+"ms")
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		NewHeatmap(args)
+	}
 }

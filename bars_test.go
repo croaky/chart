@@ -2,6 +2,7 @@ package chart
 
 import (
 	"math"
+	"strconv"
 	"testing"
 
 	"github.com/croaky/is"
@@ -221,4 +222,30 @@ func TestStackedColumnsWithNothingToPlot(t *testing.T) {
 	is.True(!NewStackedColumns([]string{"a"}, nil, nil).HasChart)
 	is.True(!NewStackedColumns([]string{"a"}, nil, []StackedColumn{{Label: "x"}}).HasChart)
 	is.Eq(endsAndMiddle([]string{"a", "b"}), []string{"a", "b"})
+}
+
+func BenchmarkNewValueBars(b *testing.B) {
+	rows := make([]ValueBarRow, 20)
+	for i := range rows {
+		rows[i] = ValueBarRow{Label: "Row " + strconv.Itoa(i), Class: SeriesClass(i), Value: 1.5 * float64(i*i)}
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		NewValueBars(USD, "Revenue", rows)
+	}
+}
+
+func BenchmarkNewSeriesBars(b *testing.B) {
+	names := make([]string, 30)
+	for i := range names {
+		names[i] = "Name " + strconv.Itoa(i)
+	}
+	rows := make([]SeriesBarRow, 10)
+	for i := range rows {
+		rows[i] = SeriesBarRow{Label: "Row " + strconv.Itoa(i), Count: 40 * i, Names: names}
+	}
+	b.ReportAllocs()
+	for b.Loop() {
+		NewSeriesBars("Companies", rows)
+	}
 }

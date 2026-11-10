@@ -106,22 +106,37 @@ func (a LogAxis) ends() (lo, hi float64) { return a.Min, a.Max }
 // It thins by whole mantissas, not by single ticks. An axis of 1, 2, 5,
 // 10, 20, 50 thinned to 1, 5, 20 reads as three unrelated numbers. An
 // axis of 1, 10, 100 reads as a scale.
+//
+// It counts the round values of each ladder first and labels only the
+// ladder it keeps, so a ladder it drops prints no label.
 func (a LogAxis) tickLadder(f Format) []AxisTick {
 	for _, keep := range [][]float64{mantissas, {1, 5}, {1}} {
-		ticks := a.ticksFor(keep, f)
-		if len(ticks) <= logTickTarget {
-			return ticks
+		values := a.valuesFor(keep, f)
+		if len(values) <= logTickTarget {
+			return a.label(values, f)
 		}
 	}
 	// Past a thousandfold range even one tick per decade is too many,
 	// so this keeps every other decade.
-	return everyOther(a.ticksFor([]float64{1}, f))
+	return a.label(everyOther(a.valuesFor([]float64{1}, f)), f)
 }
 
-// ticksFor labels each given mantissa in each decade the axis covers,
+// label places and labels each value.
+func (a LogAxis) label(values []float64, f Format) []AxisTick {
+	if len(values) == 0 {
+		return nil
+	}
+	ticks := make([]AxisTick, 0, len(values))
+	for _, v := range values {
+		ticks = append(ticks, AxisTick{Label: FormatValue(v, f), At: a.Up(v)})
+	}
+	return ticks
+}
+
+// valuesFor is each given mantissa in each decade the axis covers,
 // smallest first.
-func (a LogAxis) ticksFor(keep []float64, f Format) []AxisTick {
-	var ticks []AxisTick
+func (a LogAxis) valuesFor(keep []float64, f Format) []float64 {
+	var values []float64
 	// The ends are placeable, so each exponent is within 301 of zero.
 	// The limit keeps the loop finite if an end is not, because a
 	// float to int conversion of an infinity has no fixed result.
@@ -143,17 +158,17 @@ func (a LogAxis) ticksFor(keep []float64, f Format) []AxisTick {
 			if (f == Count || f == Signed || f == Millis) && v < 1 {
 				continue
 			}
-			ticks = append(ticks, AxisTick{Label: FormatValue(v, f), At: a.Up(v)})
+			values = append(values, v)
 		}
 	}
-	return ticks
+	return values
 }
 
-// everyOther keeps the first tick and every second one after it, so
+// everyOther keeps the first value and every second one after it, so
 // the bottom of the axis always has a label.
-func everyOther(ticks []AxisTick) []AxisTick {
-	out := make([]AxisTick, 0, (len(ticks)+1)/2)
-	for i, t := range ticks {
+func everyOther(values []float64) []float64 {
+	out := make([]float64, 0, (len(values)+1)/2)
+	for i, t := range values {
 		if i%2 == 0 {
 			out = append(out, t)
 		}

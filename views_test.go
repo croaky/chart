@@ -471,3 +471,18 @@ func TestCSSSizesPaddedBoxes(t *testing.T) {
 		css = inner.ReplaceAllString(css, "")
 	}
 }
+
+// BenchmarkLinesView renders the largest view from a chart of ten
+// series of two years of weekly points.
+func BenchmarkLinesView(b *testing.B) {
+	ctx := hml.NewContext(map[string]any{"data": NewLines(Count, benchSeries(10))})
+	var w strings.Builder
+	b.ReportAllocs()
+	for b.Loop() {
+		w.Reset()
+		if err := Partial("chart/lines", ctx, &w); err != nil {
+			b.Fatal(err)
+		}
+	}
+	b.SetBytes(int64(w.Len()))
+}

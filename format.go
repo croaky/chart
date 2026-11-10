@@ -170,28 +170,34 @@ func compact(v float64) string {
 
 // delimited prints a whole number with a comma between each group of
 // three digits.
+//
+// It writes into one buffer of the final size, because an axis and
+// each tip of a chart call it, and a growing builder allocated three
+// times for each call.
 func delimited(n int) string {
-	s := strconv.Itoa(n)
+	// strconv.Itoa returns a small number without an allocation.
+	if n > -1000 && n < 1000 {
+		return strconv.Itoa(n)
+	}
+	var digits [24]byte
+	s := strconv.AppendInt(digits[:0], int64(n), 10)
 	start := 0
-	if strings.HasPrefix(s, "-") {
+	if s[0] == '-' {
 		start = 1
 	}
-	digits := len(s) - start
-	if digits <= 3 {
-		return s
-	}
-	var b strings.Builder
-	b.WriteString(s[:start])
-	first := start + digits%3
+	count := len(s) - start
+	out := make([]byte, 0, len(s)+(count-1)/3)
+	out = append(out, s[:start]...)
+	first := start + count%3
 	if first == start {
 		first = start + 3
 	}
-	b.WriteString(s[start:first])
+	out = append(out, s[start:first]...)
 	for i := first; i < len(s); i += 3 {
-		b.WriteByte(',')
-		b.WriteString(s[i : i+3])
+		out = append(out, ',')
+		out = append(out, s[i:i+3]...)
 	}
-	return b.String()
+	return string(out)
 }
 
 // pluralize prints a count and the noun that agrees with it.

@@ -303,3 +303,25 @@ func TestLogAxisWithExtremeValues(t *testing.T) {
 	is.Eq(a.Min, 1.0)
 	is.Eq(a.Max, 10.0)
 }
+
+func BenchmarkNewValueAxis(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		NewValueAxis(-6, 1_150_000_000, USD)
+	}
+}
+
+func BenchmarkNewLogAxis(b *testing.B) {
+	b.ReportAllocs()
+	for b.Loop() {
+		NewLogAxis(Range{Min: 0.0042, Max: 3_800_000}, Price)
+	}
+}
+
+func BenchmarkPlacedTicks(b *testing.B) {
+	ticks := NewValueAxis(0, 4_000, Count).Ticks
+	b.ReportAllocs()
+	for b.Loop() {
+		PlacedTicks(ticks)
+	}
+}

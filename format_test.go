@@ -131,3 +131,25 @@ func TestDelimited(t *testing.T) {
 	is.Eq(delimited(123456), "123,456")
 	is.Eq(delimited(-1234567), "-1,234,567")
 }
+
+func BenchmarkFormatValue(b *testing.B) {
+	for _, bc := range []struct {
+		name string
+		f    Format
+		v    float64
+	}{
+		{"count", Count, 824_612},
+		{"usd", USD, 1_150_000_000},
+		{"price", Price, 0.00738},
+		{"percent", Percent, 42.4},
+		{"millis", Millis, 59_990},
+		{"signed", Signed, -6},
+	} {
+		b.Run(bc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				FormatValue(bc.v, bc.f)
+			}
+		})
+	}
+}
