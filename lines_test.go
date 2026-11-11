@@ -286,6 +286,50 @@ func TestLinesClock12(t *testing.T) {
 	is.Eq(TimeTicks(day0, day0.Add(36*time.Hour), WithClock12()), []string{"Jan 5 12:00 AM", "Jan 5 6:00 PM", "Jan 6 12:00 PM"})
 }
 
+// A tip holds only the lines of the series with a value on its date.
+// Its capacity is that count and not the series count, so series whose
+// dates do not match use memory linear in their points.
+func TestLinesColumnsWithUnalignedSeries(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	l := NewLines(Count, []Series{
+		{Label: "a", Points: []Point{pt(0, 1), pt(3, 4)}},
+		{Label: "b", Points: []Point{pt(1, 2), pt(3, 5)}},
+		{Label: "c", Points: []Point{pt(2, 3)}},
+	})
+
+	is.Eq(len(l.Columns), 4)
+	is.Eq(l.Columns[0].Tip.Lines, []TipLine{{Label: "a", HasLabel: true, Value: "1"}})
+	is.Eq(l.Columns[1].Tip.Lines, []TipLine{{Label: "b", HasLabel: true, Value: "2"}})
+	is.Eq(l.Columns[2].Tip.Lines, []TipLine{{Label: "c", HasLabel: true, Value: "3"}})
+	is.Eq(l.Columns[3].Tip.Lines, []TipLine{
+		{Label: "a", HasLabel: true, Value: "4"},
+		{Label: "b", HasLabel: true, Value: "5"},
+	})
+	for _, c := range l.Columns {
+		is.Eq(cap(c.Tip.Lines), len(c.Tip.Lines))
+	}
+}
+
+// Two points of one series on one date make one line in the tip, with
+// the last value.
+func TestLinesColumnsWithRepeatedDate(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	l := NewLines(Count, []Series{
+		{Label: "a", Points: []Point{pt(0, 1), pt(1, 2), pt(1, 3)}},
+		{Label: "b", Points: []Point{pt(1, 4)}},
+	})
+
+	is.Eq(len(l.Columns), 2)
+	is.Eq(l.Columns[1].Tip.Lines, []TipLine{
+		{Label: "a", HasLabel: true, Value: "3"},
+		{Label: "b", HasLabel: true, Value: "4"},
+	})
+}
+
 func endAt(label string, v float64) Series {
 	return Series{Label: label, Class: label, Points: []Point{pt(0, 0), pt(1, v)}}
 }
@@ -388,6 +432,23 @@ func BenchmarkNewLines(b *testing.B) {
 			}
 		})
 	}
+
+	// 200 series of ten points, each point on its own date: the shape
+	// of one series for each thing a user creates.
+	unaligned := make([]Series, 200)
+	for i := range unaligned {
+		points := make([]Point, 10)
+		for j := range points {
+			points[j] = Point{At: day0.Add(time.Duration(10*i+j) * time.Hour), Value: float64(j + 1)}
+		}
+		unaligned[i] = Series{Label: "Series " + strconv.Itoa(i), Class: SeriesClass(i), Points: points}
+	}
+	b.Run("unaligned", func(b *testing.B) {
+		b.ReportAllocs()
+		for b.Loop() {
+			NewLines(Count, unaligned)
+		}
+	})
 }
 
 func BenchmarkNewSparkline(b *testing.B) {

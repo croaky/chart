@@ -153,6 +153,10 @@ type EndLabel struct {
 // point outside WithBounds does not draw. A series with no other point
 // does not draw.
 //
+// The work and the memory of a chart are linear in the points that
+// draw. The package sets no limit on the series or the points. An app
+// that charts user data limits how many points it passes.
+//
 // No series with a point means no chart: [Lines.HasChart] stays false,
 // and the view renders nothing. A linear chart whose every value is
 // zero is no chart either, unless WithDomain set the axis. An axis from
@@ -356,32 +360,57 @@ func (p plot) columns(f Format, o options) []LineColumn {
 		placed = BucketColumns(p.xs, linesWidth, width)
 	}
 
-	// Each series is indexed by date once here, and not scanned for each
-	// column: two years of weekly points across ten series is a
-	// thousand points, and each column would walk all of them.
-	at := make([]map[int64]float64, len(p.series))
-	for i, s := range p.series {
-		at[i] = make(map[int64]float64, len(s.Points))
+	// The tip lines come from one walk over the points, and not from each
+	// series on each date. Series whose dates do not match have about as
+	// many dates as points, so a grid of series and dates grows as the
+	// square of the data. One backing slice holds the lines of all the
+	// tips, so memory is linear in the points.
+	//
+	// last is the series of the newest line in each column. Two points
+	// of one series on one date make one line, and the last value wins.
+	counts := make([]int, len(p.dates))
+	last := make([]int, len(p.dates))
+	for i := range last {
+		last[i] = -1
+	}
+	total := 0
+	for j, s := range p.series {
 		for _, pt := range s.Points {
-			at[i][pt.At.UnixNano()] = pt.Value
+			if c := p.columnOf[pt.At.UnixNano()]; last[c] != j {
+				last[c] = j
+				counts[c]++
+				total++
+			}
 		}
 	}
 
 	gap := minGap(p.dates)
-	cols := make([]LineColumn, 0, len(p.dates))
+	lines := make([]TipLine, total)
+	cols := make([]LineColumn, len(p.dates))
+	off := 0
 	for i, d := range p.dates {
 		tip := NewTipAt(o.clock().point(d, gap), p.xs[i]/linesWidth)
-		tip.Lines = make([]TipLine, 0, len(p.series))
-		for j, s := range p.series {
-			if v, ok := at[j][d.UnixNano()]; ok {
-				tip = tip.Line(s.Label, FormatValue(v, f))
-			}
-		}
-		cols = append(cols, LineColumn{
+		// The cap stops an append to one tip at the start of the next.
+		tip.Lines = lines[off : off : off+counts[i]]
+		off += counts[i]
+		last[i] = -1
+		cols[i] = LineColumn{
 			Style:     placed[i].Style,
 			LineStyle: placed[i].LineStyle,
 			Tip:       tip,
-		})
+		}
+	}
+
+	for j, s := range p.series {
+		for _, pt := range s.Points {
+			c := p.columnOf[pt.At.UnixNano()]
+			tip := &cols[c].Tip
+			if last[c] == j {
+				tip.Lines = tip.Lines[:len(tip.Lines)-1]
+			}
+			last[c] = j
+			*tip = tip.Line(s.Label, FormatValue(pt.Value, f))
+		}
 	}
 	return cols
 }
