@@ -3,9 +3,7 @@
 Each plan is one change. A plan names the security findings it closes
 by their finding ID.
 
-- [001-lines-end-label-cap.md](001-lines-end-label-cap.md): cap the
-  `NewLines` end labels at a fixed count, and draw the legend past the
-  cap. It closes `find_01HazofbjUCujQ2ku5xhfvNR`.
+No plan is open.
 
 ## Threat model
 

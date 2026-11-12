@@ -154,8 +154,9 @@ type EndLabel struct {
 // does not draw.
 //
 // The work and the memory of a chart are linear in the points that
-// draw. The package sets no limit on the series or the points. An app
-// that charts user data limits how many points it passes.
+// draw. The end labels stop at a fixed count, so they do not change
+// that bound. The package sets no limit on the series or the points.
+// An app that charts user data limits how many points it passes.
 //
 // No series with a point means no chart: [Lines.HasChart] stays false,
 // and the view renders nothing. A linear chart whose every value is
@@ -183,9 +184,11 @@ func NewLines(f Format, series []Series, opts ...Option) Lines {
 	}
 	l.HasZero, l.ZeroY = p.zero()
 	// End labels name each line where it ends, so a legend below the
-	// plot would name each one a second time.
-	l.HasLegend = len(l.Legend) > 0 && !o.endLabels
-	if o.endLabels {
+	// plot would name each one a second time. Past maxEndLabels the
+	// labels do not fit, and the legend names the lines.
+	endLabels := o.endLabels && len(p.series) <= maxEndLabels
+	l.HasLegend = len(l.Legend) > 0 && !endLabels
+	if endLabels {
 		l.EndLabels = p.endLabels(f)
 		l.HasEndLabels = len(l.EndLabels) > 0
 	}
@@ -426,6 +429,17 @@ func minGap(dates []time.Time) time.Duration {
 	}
 	return gap
 }
+
+// maxEndLabels is the most end labels a chart draws. Past it, NewLines
+// draws the legend.
+//
+// Each label needs one line of the plot. At the default --chart-height
+// of 12rem and a line height of 1.2, about ten fit. Past that count the
+// labels leave the plot and cover the page. The CSS of each label also
+// holds one term for each label above it, so n labels hold about n²/2
+// terms. At 12 that is 90 terms, about 2 KB. At 10,000 series from user
+// data it would be more than a gigabyte.
+const maxEndLabels = 12
 
 // endLabels places a label at the end of each line and moves labels
 // apart that sit closer than one label line.

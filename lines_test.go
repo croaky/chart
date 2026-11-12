@@ -363,6 +363,30 @@ func TestLinesEndLabelsStayInThePlot(t *testing.T) {
 	is.Eq(string(l.EndLabels[0].Style), "--chart-top: min(max(calc(0.5 * 1lh), 0.00%), calc(100% - 0.5 * 1lh))")
 }
 
+// Up to maxEndLabels lines get end labels. Past that count the labels
+// cannot fit in the plot, and their CSS grows with the square of the
+// count, so the chart draws the legend.
+func TestLinesEndLabelsCap(t *testing.T) {
+	t.Parallel()
+	is := is.New(t)
+
+	series := make([]Series, maxEndLabels+1)
+	for i := range series {
+		series[i] = Series{Label: strconv.Itoa(i), Points: []Point{pt(0, float64(i))}}
+	}
+
+	l := NewLines(Count, series[:maxEndLabels], WithEndLabels())
+	is.True(l.HasEndLabels)
+	is.Eq(len(l.EndLabels), maxEndLabels)
+	is.True(!l.HasLegend)
+
+	l = NewLines(Count, series, WithEndLabels())
+	is.True(!l.HasEndLabels)
+	is.Eq(len(l.EndLabels), 0)
+	is.True(l.HasLegend)
+	is.Eq(len(l.Legend), maxEndLabels+1)
+}
+
 // A sparkline names the ends of both axes and needs no hover.
 func TestSparkline(t *testing.T) {
 	t.Parallel()

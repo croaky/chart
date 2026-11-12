@@ -89,6 +89,9 @@ func WithClock12() Option {
 // WithEndLabels labels the end of each line with its series and its
 // last value, and leaves out the legend, because each line then has
 // its name at its end. See [EndLabel].
+//
+// A chart of more than 12 lines draws the legend and no end labels.
+// More labels do not fit in the plot.
 func WithEndLabels() Option {
 	return func(o *options) { o.endLabels = true }
 }
