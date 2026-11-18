@@ -4,5 +4,5 @@ go 1.27.3
 
 require (
 	github.com/croaky/hml v0.9.0
-	github.com/croaky/is v0.2.1
+	github.com/croaky/is v0.2.2
 )
