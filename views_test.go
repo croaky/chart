@@ -283,6 +283,130 @@ func TestHeatmapView(t *testing.T) {
 	is.True(!strings.Contains(out, `tabindex`))
 }
 
+// A name that a caller passes once prints in full a fixed number of
+// times, whatever the count of marks. Each mark prints at most
+// tipTextMax bytes of it. Without that bound, one long name that a user
+// stores grows the page as its length times the marks.
+//
+// Each case renders with a name of 1,000 bytes and of 101,000 bytes.
+// Both are past tipTextMax, so the text of each mark is the same in
+// both, and the growth divided by 100,000 is the count of full copies.
+func TestViewsPrintEachNameABoundedNumberOfTimes(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	const marks = 40
+	others := func(n int) []string {
+		out := make([]string, n)
+		for i := range out {
+			out[i] = "L" + delimited(i)
+		}
+		return out
+	}
+	grid := func(x, y int) [][]int {
+		counts := make([][]int, x)
+		for i := range counts {
+			counts[i] = slices.Repeat([]int{1}, y)
+		}
+		return counts
+	}
+	grouped := func() []GroupedColumn {
+		cols := make([]GroupedColumn, marks)
+		for i := range cols {
+			cols[i] = GroupedColumn{Label: "C" + delimited(i), Counts: []int{1, 1}, URLs: []string{"/a", "/b"}}
+		}
+		return cols
+	}
+	points := func() []XYPoint {
+		out := make([]XYPoint, marks)
+		for i := range out {
+			out[i] = XYPoint{Label: "P" + delimited(i), X: float64(i + 1), Y: float64(i + 1)}
+		}
+		return out
+	}
+	rows := func() []SeriesBarRow {
+		out := make([]SeriesBarRow, marks)
+		for i := range out {
+			out[i] = SeriesBarRow{Label: "R" + delimited(i), Count: i + 1}
+		}
+		return out
+	}
+
+	cases := []struct {
+		name  string
+		view  string
+		build func(name string) any
+		want  int
+	}{
+		// The legend names the series once.
+		{"lines label", "chart/lines", func(n string) any {
+			pts := make([]Point, marks)
+			for i := range pts {
+				pts[i] = pt(i, float64(i+1))
+			}
+			return NewLines(Count, []Series{{Label: n, Points: pts}})
+		}, 1},
+		{"grouped series", "chart/grouped_bars", func(n string) any {
+			return NewGroupedBars([]string{n, "b"}, grouped())
+		}, 1},
+		{"value grouped series", "chart/grouped_bars", func(n string) any {
+			cols := make([]ValueGroupedColumn, marks)
+			for i := range cols {
+				cols[i] = ValueGroupedColumn{Label: "C" + delimited(i), Values: []float64{1, 2}}
+			}
+			return NewValueGroupedBars(Count, []LegendKey{{Label: n}, {Label: "b"}}, cols)
+		}, 1},
+		{"stacked series", "chart/stacked_columns", func(n string) any {
+			cols := make([]StackedColumn, marks)
+			for i := range cols {
+				cols[i] = StackedColumn{Label: "C" + delimited(i), Counts: []int{1, 1}, URLs: []string{"/a", "/b"}}
+			}
+			return NewStackedColumns([]string{n, "b"}, nil, cols)
+		}, 1},
+		// The first X label is also the first date under the grid.
+		{"heatmap x label", "chart/heatmap", func(n string) any {
+			return NewHeatmap(HeatmapArgs{XLabels: append([]string{n}, others(2)...), YLabels: others(marks), Counts: grid(3, marks)})
+		}, 1},
+		// The y axis names each row once.
+		{"heatmap y label", "chart/heatmap", func(n string) any {
+			return NewHeatmap(HeatmapArgs{XLabels: others(marks), YLabels: []string{n}, Counts: grid(marks, 1)})
+		}, 1},
+		{"heatmap row label", "chart/heatmap", func(n string) any {
+			return NewHeatmap(HeatmapArgs{XLabels: others(marks), YLabels: others(2), Counts: grid(marks, 2), RowLabel: n})
+		}, 0},
+		{"heatmap count label", "chart/heatmap", func(n string) any {
+			return NewHeatmap(HeatmapArgs{XLabels: others(marks), YLabels: others(2), Counts: grid(marks, 2), CountLabel: n})
+		}, 0},
+		{"scatter x label", "chart/scatter", func(n string) any {
+			return NewXYScatter(XYScatterArgs{XLabel: n, Points: points()})
+		}, 0},
+		{"scatter y label", "chart/scatter", func(n string) any {
+			return NewXYScatter(XYScatterArgs{YLabel: n, Points: points()})
+		}, 0},
+		{"series bars count label", "chart/bars", func(n string) any {
+			return NewSeriesBars(n, rows())
+		}, 0},
+		{"value bars value label", "chart/bars", func(n string) any {
+			values := make([]ValueBarRow, marks)
+			for i := range values {
+				values[i] = ValueBarRow{Label: "R" + delimited(i), Value: float64(i + 1)}
+			}
+			return NewValueBars(Count, n, values)
+		}, 0},
+	}
+	const short, grow = 1_000, 100_000
+	for _, c := range cases {
+		size := func(n int) int {
+			return len(render(t, c.view, map[string]any{"data": c.build(strings.Repeat("n", n))}))
+		}
+		growth := size(short+grow) - size(short)
+		if growth%grow != 0 {
+			t.Errorf("%s: growth %d is not a whole count of copies", c.name, growth)
+		}
+		is.Eq(growth/grow, c.want)
+	}
+}
+
 var (
 	cssComment = regexp.MustCompile(`(?s)/\*.*?\*/`)
 	classInCSS = regexp.MustCompile(`\.([a-z][a-z0-9_-]*)`)

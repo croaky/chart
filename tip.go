@@ -3,6 +3,7 @@ package chart
 import (
 	"strconv"
 	"strings"
+	"unicode/utf8"
 )
 
 // Tip is the panel a reader gets when they point at a chart mark or
@@ -17,14 +18,20 @@ import (
 // One shape serves every chart, and the shape says where each kind of
 // fact goes:
 //
-//   - Title is the mark's own name in full. An axis abbreviates, so
-//     the title is the thing the reader does not have on screen yet.
+//   - Title is the mark's own name, up to [tipTextMax] bytes. An axis
+//     abbreviates, so the title is the thing the reader does not have
+//     on screen yet.
 //   - Image is a small picture beside the title, such as a logo, for a
 //     mark that stands for one thing.
 //   - Lines are the facts behind the mark, one labeled fact on each
 //     line.
 //   - Names is a list of the things the mark counts, capped, in its own
 //     block. A list of proper nouns wraps where a labeled fact must not.
+//
+// Each text field holds at most [tipTextMax] bytes of each string a
+// caller passes. A builder puts a series or axis name in the tip of
+// each mark, and the view prints each copy. Without the bound, one long
+// name grows the page as its length times the marks.
 //
 // The Has fields exist because hml has no truthiness: a view asks the
 // builder.
@@ -64,6 +71,39 @@ type TipLine struct {
 // the chart it covers, and nobody reads to the end.
 const TipNameLimit = 8
 
+// tipTextMax is the most bytes of one string that a tip prints. The
+// panel is at most 20rem wide, about 40 characters on each line, so 200
+// bytes is five lines. A longer name is not a glance, and the full name
+// belongs in a table under the chart.
+const tipTextMax = 200
+
+// tipText is s with its white space trimmed, cut to tipTextMax bytes on
+// a rune boundary. It ends in "…" when it cut. It reads no byte past
+// the limit, so each mark costs the same for a name of any length.
+func tipText(s string) string {
+	if len(s) <= tipTextMax {
+		return strings.TrimSpace(s)
+	}
+	cut := tipTextMax
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	if s = strings.TrimSpace(s[:cut]); s == "" {
+		return ""
+	}
+	return s + "…"
+}
+
+// tipTexts is tipText for each name. A builder that puts the same names
+// in each mark bounds them once, before its loop over the marks.
+func tipTexts(names []string) []string {
+	out := make([]string, len(names))
+	for i, name := range names {
+		out[i] = tipText(name)
+	}
+	return out
+}
+
 // NewTip starts a tip for the mark at index i of n marks across the
 // plot, such as a bar in a row of bars.
 func NewTip(title string, i, n int) Tip {
@@ -94,7 +134,7 @@ func NewStackedTip(title string) Tip {
 }
 
 func newTip(title, class string) Tip {
-	title = strings.TrimSpace(title)
+	title = tipText(title)
 	return Tip{Title: title, HasTitle: title != "", Class: class}
 }
 
@@ -121,8 +161,8 @@ func (t Tip) SubLine(label, value string) Tip {
 }
 
 func newTipLine(label, value, class string) TipLine {
-	label = strings.TrimSpace(label)
-	return TipLine{Label: label, HasLabel: label != "", Value: value, Class: class}
+	label = tipText(label)
+	return TipLine{Label: label, HasLabel: label != "", Value: tipText(value), Class: class}
 }
 
 // Count adds a labeled whole number, delimited as an axis prints it.
@@ -152,13 +192,13 @@ func (t Tip) WithNames(names []string) Tip {
 	return t
 }
 
-// capNames keeps the first TipNameLimit names that are not blank and
-// says how many it left out.
+// capNames keeps the first TipNameLimit names that are not blank, each
+// bounded by tipText, and says how many it left out.
 func capNames(names []string) string {
 	kept := make([]string, 0, min(len(names), TipNameLimit+1))
 	rest := 0
 	for _, name := range names {
-		if name = strings.TrimSpace(name); name == "" {
+		if name = tipText(name); name == "" {
 			continue
 		}
 		if len(kept) < TipNameLimit {

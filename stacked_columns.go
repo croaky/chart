@@ -33,7 +33,8 @@ type StackedColumn struct {
 }
 
 // StackedSegment is one series' share of one column. Style sets
-// --chart-pct, as [Bar.Style] does.
+// --chart-pct, as [Bar.Style] does. Series is cut as
+// [GroupedBar.Series] is, for the same reason.
 //
 // LinkAttrs holds the attributes of [StackedColumns.WithLinkAttr], and
 // is nil for a segment with no URL.
@@ -126,6 +127,8 @@ type StackedColumns struct {
 // A column whose counts are all zero still draws, because the period is
 // a place on the axis. Leaving it out would put two periods that are not
 // neighbors side by side and read as a run.
+//
+// Each column bounds the series names as [NewGroupedBars] does.
 func NewStackedColumns(series, classes []string, cols []StackedColumn) StackedColumns {
 	classOf := func(i int) string {
 		if c := at(classes, i); c != "" {
@@ -146,6 +149,7 @@ func NewStackedColumns(series, classes []string, cols []StackedColumn) StackedCo
 	}
 
 	maxY, ticks := AxisScale(maxTotal)
+	names := tipTexts(series)
 	out := make([]StackedCol, 0, len(cols))
 	for i, c := range cols {
 		segments := make([]StackedSegment, 0, len(series))
@@ -154,7 +158,7 @@ func NewStackedColumns(series, classes []string, cols []StackedColumn) StackedCo
 			title = c.Label
 		}
 		tip := NewTip(title, i, len(cols)).Count("Total", totals[i])
-		for j, name := range series {
+		for j, name := range names {
 			count := at(c.Counts, j)
 			// Each series, zero included, so a reader learns the shape
 			// of the panel once and does not look for a missing line.

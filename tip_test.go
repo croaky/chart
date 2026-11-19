@@ -1,6 +1,7 @@
 package chart
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/croaky/is"
@@ -51,6 +52,32 @@ func TestTipLines(t *testing.T) {
 		{Value: "alone"},
 		{Label: "Won", HasLabel: true, Value: "2", Names: "Acme, Beta", HasNames: true},
 	})
+}
+
+// A tip prints at most tipTextMax bytes of a name, cut on a rune
+// boundary, and "…" says that it cut.
+func TestTipText(t *testing.T) {
+	t.Parallel()
+	is := is.NewRelaxed(t)
+
+	a := strings.Repeat("a", tipTextMax)
+	is.Eq(tipText("  Acme  "), "Acme")
+	is.Eq(tipText(a), a)
+	is.Eq(tipText(a+"b"), a+"…")
+	// The cut falls inside the two bytes of é, so the é goes.
+	is.Eq(tipText(a[1:]+"é"), a[1:]+"…")
+	// A name that is mostly white space reads only the first bytes.
+	is.Eq(tipText(strings.Repeat(" ", 1<<20)+"a"), "")
+	is.Eq(tipText("a"+strings.Repeat(" ", 1<<20)), "a…")
+
+	long := a + strings.Repeat("b", 1<<20)
+	tip := NewTip(long, 0, 1).Line(long, long).CountWithNames(long, 1, []string{long}).WithNames([]string{long})
+	is.Eq(tip.Title, a+"…")
+	is.Eq(tip.Lines[0].Label, a+"…")
+	is.Eq(tip.Lines[0].Value, a+"…")
+	is.Eq(tip.Lines[1].Label, a+"…")
+	is.Eq(tip.Lines[1].Names, a+"…")
+	is.Eq(tip.Names, a+"…")
 }
 
 // A tip lists eight names and counts the rest. A blank name is no name.

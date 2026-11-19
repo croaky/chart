@@ -29,6 +29,10 @@ type GroupedColumn struct {
 // GroupedBar is one bar: one series in one category. Style sets
 // --chart-pct, as [Bar.Style] does.
 //
+// Series is the series name, cut as [Tip] cuts it. The view prints it
+// in the aria-label of each linked bar, so a full name would print once
+// for each column.
+//
 // LinkAttrs holds the attributes of [GroupedBars.WithLinkAttr], and is
 // nil for a bar with no URL.
 type GroupedBar struct {
@@ -83,6 +87,10 @@ type GroupedBars struct {
 // is a place on the axis. A year with nothing in it is a gap, and
 // leaving it out would put two years that are not neighbors side by
 // side.
+//
+// Each column prints at most [tipTextMax] bytes of each series name, in
+// its tip and its aria-labels. The legend prints each name once, in
+// full.
 func NewGroupedBars(series []string, cols []GroupedColumn) GroupedBars {
 	maxCount := 0
 	for _, c := range cols {
@@ -95,11 +103,12 @@ func NewGroupedBars(series []string, cols []GroupedColumn) GroupedBars {
 	}
 
 	maxY, ticks := AxisScale(maxCount)
+	names := tipTexts(series)
 	out := make([]GroupedCol, 0, len(cols))
 	for i, c := range cols {
 		bars := make([]GroupedBar, 0, len(series))
 		tip := NewTip(c.Label, i, len(cols))
-		for j, name := range series {
+		for j, name := range names {
 			count := at(c.Counts, j)
 			bars = append(bars, GroupedBar{
 				Series: name,
@@ -130,6 +139,7 @@ type ValueGroupedColumn struct {
 // NewValueGroupedBars is [NewGroupedBars] for values that are not small
 // whole numbers. The caller names each series' class in its legend key,
 // so one thing is one color here and in every other chart on the page.
+// Each column bounds the series names as [NewGroupedBars] does.
 func NewValueGroupedBars(f Format, series []LegendKey, cols []ValueGroupedColumn) GroupedBars {
 	maxVal := 0.0
 	for _, c := range cols {
@@ -142,6 +152,10 @@ func NewValueGroupedBars(f Format, series []LegendKey, cols []ValueGroupedColumn
 	}
 
 	axis := NewValueAxis(0, maxVal, f)
+	names := make([]string, len(series))
+	for j, s := range series {
+		names[j] = tipText(s.Label)
+	}
 	out := make([]GroupedCol, 0, len(cols))
 	for i, c := range cols {
 		bars := make([]GroupedBar, 0, len(series))
@@ -150,12 +164,12 @@ func NewValueGroupedBars(f Format, series []LegendKey, cols []ValueGroupedColumn
 			v := at(c.Values, j)
 			value, shown := resultText(v, f)
 			bars = append(bars, GroupedBar{
-				Series: s.Label,
+				Series: names[j],
 				Class:  s.Class,
 				Value:  shown,
 				Style:  pctStyle(axis.Up(max(placeableOr0(v), 0))),
 			})
-			tip = tip.Line(s.Label, value)
+			tip = tip.Line(names[j], value)
 		}
 		out = append(out, GroupedCol{Label: c.Label, Axis: axisLabel(c.Label, c.Axis), Bars: bars, Tip: tip})
 	}

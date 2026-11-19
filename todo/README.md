@@ -3,10 +3,7 @@
 Each plan is one change. A plan names the security findings it closes
 by their finding ID.
 
-- [001-bound-tip-text.md](001-bound-tip-text.md): bound the text of a
-  name that a chart prints once for each mark. It closes
-  `find_01HMJxkQ5vKSHdV1jtLdSVwt`, `find_01BRfRsA5bPTNggSus9egwZi`,
-  and `find_01KkW5ru74ZN2rDVvte8WAhe`.
+No plan is open.
 
 ## Threat model
 
@@ -26,6 +23,8 @@ it and render its charts on server pages.
 - Cost that the package owns: work linear in the data a caller passes.
   The caller owns how much data it passes. A builder must not turn
   linear data into work that grows faster than the data.
+- A string that a caller passes once does not print in full once for
+  each mark. A tip prints at most `tipTextMax` bytes of it.
 
 A finding needs a named attacker, a consequence, and a boundary. A
 severity label alone is not enough.

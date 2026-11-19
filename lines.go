@@ -153,10 +153,14 @@ type EndLabel struct {
 // point outside WithBounds does not draw. A series with no other point
 // does not draw.
 //
-// The work and the memory of a chart are linear in the points that
-// draw. The end labels stop at a fixed count, so they do not change
-// that bound. The package sets no limit on the series or the points.
-// An app that charts user data limits how many points it passes.
+// The work, the memory, and the markup of a chart are linear in the
+// points that draw plus the bytes of the labels. The end labels stop
+// at a fixed count, so they do not change that bound. The tip of each
+// point prints at most [tipTextMax] bytes of each series label, so a
+// long label does not grow each point. The legend and the end labels
+// print each label once, in full. The package sets no limit on the
+// series or the points. An app that charts user data limits how many
+// points it passes.
 //
 // No series with a point means no chart: [Lines.HasChart] stays false,
 // and the view renders nothing. A linear chart whose every value is
