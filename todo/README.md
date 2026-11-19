@@ -3,7 +3,10 @@
 Each plan is one change. A plan names the security findings it closes
 by their finding ID.
 
-No plan is open.
+- [001-bound-tip-text.md](001-bound-tip-text.md): bound the text of a
+  name that a chart prints once for each mark. It closes
+  `find_01HMJxkQ5vKSHdV1jtLdSVwt`, `find_01BRfRsA5bPTNggSus9egwZi`,
+  and `find_01KkW5ru74ZN2rDVvte8WAhe`.
 
 ## Threat model
 
