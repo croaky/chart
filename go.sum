@@ -1,4 +1,6 @@
 github.com/croaky/hml v0.9.0 h1:PhSY3Hg3/t3PdHk8/gozKxR98SOx10aNXmuBZYmh/3M=
 github.com/croaky/hml v0.9.0/go.mod h1:bXB1g4YGuUBBoU0FJGojslO5FhFMWPLEVXBLObKJCLU=
+github.com/croaky/hml v0.10.0 h1:SmttM+KSki0f0VcCa37W7B4egKfggvTPNabfqjQ/S+Y=
+github.com/croaky/hml v0.10.0/go.mod h1:XHoLmWGIJ5Oc01xS9rKwMprksf3vbTna7RtW2cbYv+k=
 github.com/croaky/is v0.2.2 h1:vwVzc/mgoyt2ns7IoO8AvBv40d+hHMN0e/vJMBHcr5o=
 github.com/croaky/is v0.2.2/go.mod h1:4lfbXjYXhoL48bgdJ8hcTNU21x3G0cKYGSDUQRce/d4=
