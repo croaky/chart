@@ -47,6 +47,7 @@ func TestViewsParse(t *testing.T) {
 	is.Eq(names, []string{
 		"chart/bars", "chart/events", "chart/grouped_bars", "chart/heatmap", "chart/legend",
 		"chart/lines", "chart/scatter", "chart/sparkline", "chart/stacked_columns", "chart/tip",
+		"chart/xy_lines",
 	})
 }
 
@@ -84,6 +85,7 @@ func TestViewsRenderNothingWithNoChart(t *testing.T) {
 
 	for name, data := range map[string]any{
 		"chart/lines":           Lines{},
+		"chart/xy_lines":        XYLines{},
 		"chart/sparkline":       Sparkline{},
 		"chart/bars":            Bars{},
 		"chart/grouped_bars":    GroupedBars{},
@@ -268,6 +270,52 @@ func TestScatterView(t *testing.T) {
 	if quad < 0 || quad > dot || strings.Index(out, "chart-rule--down") > quad {
 		t.Errorf("want the quadrants after the grid rules and before the dots\n%s", out)
 	}
+}
+
+func TestXYLinesView(t *testing.T) {
+	t.Parallel()
+
+	x := NewXYLines(XYLinesArgs{
+		XFormat:  Price,
+		YFormat:  Percent,
+		XLabel:   "Cost",
+		YLabel:   "Score",
+		XMin:     0,
+		XMax:     10,
+		YMin:     40,
+		YMax:     70,
+		ReverseX: true,
+		HasXMark: true,
+		XMark:    5,
+		Series: []XYSeries{
+			{
+				Label: "Alpha",
+				Class: SeriesClass(0),
+				Points: []XYLinePoint{
+					{Label: "High", X: 5, Y: 60, Highlight: true},
+					{Label: "Low", X: 2, Y: 50},
+				},
+			},
+			{
+				Label: "Beta",
+				Class: SeriesClass(1),
+				Points: []XYLinePoint{
+					{Label: "High", X: 4, Y: 55},
+				},
+			},
+		},
+	})
+	out := render(t, "chart/xy_lines", map[string]any{"data": x})
+	mustContain(t, out,
+		`chart-xy-lines`,
+		`chart-rule--mark`,
+		`style="--chart-at: 50.00%"`,
+		`viewBox="0 0 1000 300"`,
+		`chart-xy-dot--highlight`,
+		`Alpha High`,
+		`Beta High`,
+		`chart-legend`,
+	)
 }
 
 func TestHeatmapView(t *testing.T) {

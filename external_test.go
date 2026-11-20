@@ -14,6 +14,7 @@ import (
 // page is an app's own view that renders two charts by name.
 const page = `%main
   = render "chart/lines", data: lines
+  = render "chart/xy_lines", data: xy
   = render "chart/bars", data: bars
 `
 
@@ -41,15 +42,28 @@ func TestAnAppRendersCharts(t *testing.T) {
 		Points: []chart.Point{{At: start, Value: 1_000_000}, {At: start.AddDate(0, 1, 0), Value: 1_500_000}},
 	}})
 	bars := chart.NewSeriesBars("Deals", []chart.SeriesBarRow{{Label: "Won", Count: 4}, {Label: "Lost", Count: 6}})
+	xy := chart.NewXYLines(chart.XYLinesArgs{
+		XFormat:  chart.Price,
+		YFormat:  chart.Percent,
+		XLabel:   "Cost",
+		YLabel:   "Score",
+		ReverseX: true,
+		Series: []chart.XYSeries{{
+			Label:  "Model A",
+			Class:  chart.SeriesClass(0),
+			Points: []chart.XYLinePoint{{Label: "Low", X: 1, Y: 45}, {Label: "Med", X: 3, Y: 58}},
+		}},
+	})
 
 	tmpl, err := hml.Parse(page, "page.hml", nil)
 	is.NoErr(err)
 	var out strings.Builder
-	err = tmpl.RenderContextTo(&out, hml.NewContext(map[string]any{"lines": lines, "bars": bars}), partial)
+	err = tmpl.RenderContextTo(&out, hml.NewContext(map[string]any{"lines": lines, "xy": xy, "bars": bars}), partial)
 	is.NoErr(err)
 
 	html := out.String()
 	is.True(strings.Contains(html, `class="chart-lines"`))
+	is.True(strings.Contains(html, `class="chart-xy-lines"`))
 	is.True(strings.Contains(html, "$1.5M"))
 	is.True(strings.Contains(html, `class="chart-bars"`))
 	is.True(strings.Contains(html, "Deals"))

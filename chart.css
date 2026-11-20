@@ -36,6 +36,7 @@
 
 @layer components {
   .chart-lines,
+  .chart-xy-lines,
   .chart-scatter,
   .chart-sparkline,
   .chart-bars,
@@ -222,6 +223,15 @@
     left: var(--chart-at);
     top: 0;
     width: 1px;
+  }
+
+  .chart-rule--mark {
+    background-color: transparent;
+    border-left: 1px dashed var(--color--border-dark, GrayText);
+    bottom: 0;
+    left: var(--chart-at);
+    top: 0;
+    width: 0;
   }
 
   .chart-axis-dates {
@@ -653,6 +663,22 @@
     &:is(:hover, :focus-visible) {
       opacity: 1;
     }
+  }
+
+  .chart-xy-dot {
+    background-color: var(--chart-mark, var(--color--accent, light-dark(#1e66f5, #8caaee)));
+    border: 1px solid var(--color--bg-secondary, Canvas);
+    border-radius: 50%;
+    bottom: var(--chart-y);
+    height: 0.55rem;
+    left: var(--chart-x);
+    position: absolute;
+    transform: translate(-50%, 50%);
+    width: 0.55rem;
+  }
+
+  .chart-xy-dot--highlight {
+    box-shadow: 0 0 0 2px var(--color--bg-secondary, Canvas), 0 0 0 3.5px var(--color--text, CanvasText);
   }
 
   /* One box for the four quadrants of a scatter, painted as three

@@ -1,0 +1,35 @@
+-# Multi-series XY lines and points on linear axes: a chart.XYLines.
+-#
+-# The SVG draws connecting lines and stretches to the plot. Colored
+-# HTML dots sit over the SVG and host each point's tip without a
+-# script, so dots stay round and tips open on hover or focus.
+- if data.has_chart
+  .chart-xy-lines
+    .chart-plot
+      .chart-axis-y
+        - for tick in data.y_ticks
+          %span.chart-axis-y-tick{ style: tick.style }
+            = tick.label
+      .chart-plot-area
+        - for tick in data.y_ticks
+          .chart-rule.chart-rule--across{ style: tick.style }
+        - for tick in data.x_ticks
+          .chart-rule.chart-rule--down{ style: tick.style }
+        - if data.has_x_mark
+          .chart-rule.chart-rule--mark{ style: data.x_mark_style }
+        %svg.chart-plot-svg{ viewBox: data.view_box, preserveAspectRatio: "none", "aria-hidden": "true" }
+          - for shape in data.shapes
+            %polyline.chart-lines-line{ class: shape.class, points: shape.points, **shape.attrs }
+        - for dot in data.dots
+          - if dot.highlight
+            .chart-xy-dot.chart-xy-dot--highlight.chart-tip-host{ class: dot.class, style: dot.style, tabindex: "0" }
+              = render "chart/tip", data: dot.tip
+          - else
+            .chart-xy-dot.chart-tip-host{ class: dot.class, style: dot.style, tabindex: "0" }
+              = render "chart/tip", data: dot.tip
+      .chart-axis-x-ticks
+        - for tick in data.x_ticks
+          %span.chart-axis-x-tick{ style: tick.style }
+            = tick.label
+    - if data.has_legend
+      = render "chart/legend", keys: data.legend, title: ""
