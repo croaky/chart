@@ -431,6 +431,28 @@ func TestViewsPrintEachNameABoundedNumberOfTimes(t *testing.T) {
 		{"scatter y label", "chart/scatter", func(n string) any {
 			return NewXYScatter(XYScatterArgs{YLabel: n, Points: points()})
 		}, 0},
+		// The legend names the series once.
+		{"xy lines label", "chart/xy_lines", func(n string) any {
+			pts := make([]XYLinePoint, marks)
+			for i := range pts {
+				pts[i] = XYLinePoint{Label: "P" + delimited(i), X: float64(i + 1), Y: float64(i + 1)}
+			}
+			return NewXYLines(XYLinesArgs{Series: []XYSeries{{Label: n, Points: pts}}})
+		}, 1},
+		{"xy lines x label", "chart/xy_lines", func(n string) any {
+			pts := make([]XYLinePoint, marks)
+			for i := range pts {
+				pts[i] = XYLinePoint{Label: "P" + delimited(i), X: float64(i + 1), Y: float64(i + 1)}
+			}
+			return NewXYLines(XYLinesArgs{XLabel: n, Series: []XYSeries{{Label: "S", Points: pts}}})
+		}, 0},
+		{"xy lines y label", "chart/xy_lines", func(n string) any {
+			pts := make([]XYLinePoint, marks)
+			for i := range pts {
+				pts[i] = XYLinePoint{Label: "P" + delimited(i), X: float64(i + 1), Y: float64(i + 1)}
+			}
+			return NewXYLines(XYLinesArgs{YLabel: n, Series: []XYSeries{{Label: "S", Points: pts}}})
+		}, 0},
 		{"series bars count label", "chart/bars", func(n string) any {
 			return NewSeriesBars(n, rows())
 		}, 0},

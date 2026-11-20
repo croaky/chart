@@ -81,6 +81,9 @@ type XYDot struct {
 // A point with a value that no axis can place is skipped. A series with
 // no placeable points is omitted. When no series has a point,
 // [XYLines.HasChart] stays false and the view renders nothing.
+//
+// Each dot prints at most [tipTextMax] bytes of its series label in its
+// tip. The legend prints each label once, in full.
 func NewXYLines(args XYLinesArgs) XYLines {
 	cleaned := make([]XYSeries, 0, len(args.Series))
 	xLo, xHi := math.Inf(1), math.Inf(-1)
@@ -159,10 +162,11 @@ func NewXYLines(args XYLinesArgs) XYLines {
 			})
 		}
 
+		label := tipText(s.Label)
 		for _, pt := range s.Points {
 			ax := across(pt.X)
 			ay := yAxis.Up(pt.Y)
-			title := s.Label
+			title := label
 			if pt.Label != "" {
 				if title != "" {
 					title += " " + pt.Label

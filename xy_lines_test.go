@@ -2,6 +2,7 @@ package chart
 
 import (
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/croaky/is"
@@ -103,4 +104,39 @@ func TestNewXYLinesAutoScale(t *testing.T) {
 	is.Eq(got.HasChart, true)
 	is.Eq(got.Shapes[0].Points, "0.0,300.0 1000.0,0.0")
 	is.Eq(got.HasXMark, false)
+}
+
+// NewXYLines bounds each series label once per series, so building tip
+// titles for labelled points does not allocate in proportion to label
+// length times point count.
+func TestNewXYLinesLongSeriesLabelAllocs(t *testing.T) {
+	is := is.New(t)
+
+	const count = 100
+	pts := make([]XYLinePoint, count)
+	for i := range pts {
+		pts[i] = XYLinePoint{Label: "P", X: float64(i + 1), Y: float64(i + 1)}
+	}
+	args := XYLinesArgs{
+		XFormat: Count,
+		YFormat: Count,
+		Series: []XYSeries{{
+			Label:  strings.Repeat("a", 50_000),
+			Class:  SeriesClass(0),
+			Points: pts,
+		}},
+	}
+
+	got := NewXYLines(args)
+	is.Eq(len(got.Legend[0].Label), 50_000)
+	is.Eq(got.Dots[0].Tip.Title, strings.Repeat("a", tipTextMax)+"…")
+
+	res := testing.Benchmark(func(b *testing.B) {
+		for b.Loop() {
+			NewXYLines(args)
+		}
+	})
+	// Without bounding s.Label before the point loop, 100 labelled points
+	// allocate ~5 MB per call.
+	is.True(res.AllocedBytesPerOp() < 500_000)
 }
