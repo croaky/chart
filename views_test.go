@@ -110,6 +110,8 @@ func TestLinesView(t *testing.T) {
 		`viewBox="0 0 1000 300"`,
 		`preserveAspectRatio="none"`,
 		`points="0.0,225.0 333.3,150.0 1000.0,0.0"`,
+		`chart-lines-line--dot`,
+		`chart-rule--down`,
 		`style="--chart-at: 100.00%"`,
 		`style="--chart-left: 0.00%; --chart-width: 16.67%"`,
 		`tabindex="0"`,

@@ -33,8 +33,9 @@ func TestLinesShapes(t *testing.T) {
 	is.Eq(l.ViewBox, "0 0 1000 300")
 	is.Eq(l.Shapes, []LineShape{
 		{Class: SeriesClass(0), Points: "0.0,225.0 333.3,150.0 1000.0,0.0", End: "1000.0,0.0 1000.0,0.0"},
-		{Class: SeriesClass(1), Points: "333.3,262.5 333.3,262.5", End: "333.3,262.5 333.3,262.5"},
+		{Class: SeriesClass(1), Points: "333.3,262.5 333.3,262.5", End: "333.3,262.5 333.3,262.5", IsDot: true},
 	})
+	is.Eq(l.XRules, []hml.SafeCSS{"--chart-at: 25.00%", "--chart-at: 50.00%", "--chart-at: 75.00%"})
 	is.Eq(l.YTicks[0], PlacedTick{Label: "40", Style: "--chart-at: 100.00%"})
 	is.Eq(len(l.YTicks), 5)
 	is.True(!l.HasZero)

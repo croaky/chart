@@ -14,11 +14,16 @@
       .chart-plot-area
         - for tick in data.y_ticks
           .chart-rule.chart-rule--across{ style: tick.style }
+        - for rule in data.x_rules
+          .chart-rule.chart-rule--down{ style: rule }
         %svg.chart-plot-svg{ viewBox: data.view_box, preserveAspectRatio: "none", "aria-hidden": "true" }
           - if data.has_zero
             %line.chart-plot-zero{ x1: "0%", x2: "100%", y1: data.zero_y, y2: data.zero_y }
           - for shape in data.shapes
-            %polyline.chart-lines-line{ class: shape.class, points: shape.points, **shape.attrs }
+            - if shape.is_dot
+              %polyline.chart-lines-line.chart-lines-line--dot{ class: shape.class, points: shape.points, **shape.attrs }
+            - else
+              %polyline.chart-lines-line{ class: shape.class, points: shape.points, **shape.attrs }
           - if data.has_end_labels
             - for shape in data.shapes
               %polyline.chart-lines-end{ class: shape.class, points: shape.end, **shape.attrs }

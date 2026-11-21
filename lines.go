@@ -84,8 +84,11 @@ type Lines struct {
 	ZeroY   string `json:"zero_y"`
 	// Dates label the start, the middle, and the end of the time axis.
 	// A chart always has one or more.
-	Dates   []string     `json:"dates"`
-	Columns []LineColumn `json:"columns"`
+	Dates []string `json:"dates"`
+	// XRules place vertical gridlines across the plot at interior time
+	// intervals when the chart spans more than one instant.
+	XRules  []hml.SafeCSS `json:"x_rules"`
+	Columns []LineColumn  `json:"columns"`
 	// EndLabels name each line at its end, when the caller asked for
 	// them with [WithEndLabels].
 	EndLabels    []EndLabel  `json:"end_labels"`
@@ -118,6 +121,7 @@ type LineShape struct {
 	Class  string         `json:"class"`
 	Points string         `json:"points"`
 	End    string         `json:"end"`
+	IsDot  bool           `json:"is_dot"`
 	Attrs  map[string]any `json:"attrs"`
 }
 
@@ -187,6 +191,9 @@ func NewLines(f Format, series []Series, opts ...Option) Lines {
 		To:       p.to.UTC().Format(time.RFC3339),
 	}
 	l.HasZero, l.ZeroY = p.zero()
+	if p.to.After(p.from) {
+		l.XRules = []hml.SafeCSS{atStyle(0.25), atStyle(0.5), atStyle(0.75)}
+	}
 	// End labels name each line where it ends, so a legend below the
 	// plot would name each one a second time. Past maxEndLabels the
 	// labels do not fit, and the legend names the lines.
@@ -326,13 +333,15 @@ func (p plot) shapes() []LineShape {
 		}
 		points := string(buf)
 		last := points[lastAt:]
-		if len(s.Points) == 1 {
+		isDot := len(s.Points) == 1
+		if isDot {
 			points = last + " " + last
 		}
 		shapes = append(shapes, LineShape{
 			Class:  s.Class,
 			Points: points,
 			End:    last + " " + last,
+			IsDot:  isDot,
 			Attrs:  markAttrs(s.Color),
 		})
 	}
